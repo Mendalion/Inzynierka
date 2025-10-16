@@ -1,0 +1,7 @@
+#zależności Node.js
+node_modules/
+#klucz API
+/.env
+
+#systemowe pliki
+.DS_Store
