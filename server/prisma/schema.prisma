@@ -1,0 +1,203 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+model User {
+  id              String          @id @default(cuid())
+  email           String          @unique
+  passwordHash    String
+  name            String?
+  phone           String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+  refreshTokens   RefreshToken[]
+  integrations    UserIntegration[]
+  listings        Listing[]
+  conversations   MessageConversation[]
+  messageTemplates MessageTemplate[]
+  reports         Report[]
+  deviceTokens    DeviceToken[]
+}
+
+model RefreshToken {
+  id        String   @id @default(cuid())
+  token     String   @unique
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  createdAt DateTime @default(now())
+  revokedAt DateTime?
+  expiresAt DateTime
+}
+
+model UserIntegration {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  platform  Platform
+  accessToken String
+  refreshToken String?
+  expiresAt  DateTime?
+  scope      String?
+  lastSyncAt DateTime?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum Platform {
+  ALLEGRO
+  OLX
+}
+
+model Listing {
+  id         String                @id @default(cuid())
+  user       User                  @relation(fields: [userId], references: [id])
+  userId     String
+  title      String
+  description String
+  price      Decimal               @db.Decimal(10,2)
+  status     ListingStatus         @default(ACTIVE)
+  archivedAt DateTime?
+  version    Int                   @default(1)
+  createdAt  DateTime              @default(now())
+  updatedAt  DateTime              @updatedAt
+  platformStates ListingPlatformState[]
+  images     ListingImage[]
+  statsViews StatsView[]
+  statsSales StatsSale[]
+}
+
+enum ListingStatus {
+  ACTIVE
+  SOLD
+  ARCHIVED
+}
+
+model ListingPlatformState {
+  id              String       @id @default(cuid())
+  listing         Listing      @relation(fields: [listingId], references: [id])
+  listingId       String
+  platform        Platform
+  platformListingId String
+  status          ListingStatus
+  lastSyncAt      DateTime?
+  createdAt       DateTime @default(now())
+  updatedAt       DateTime @updatedAt
+  @@unique([platform, platformListingId])
+}
+
+model ListingImage {
+  id        String   @id @default(cuid())
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  listingId String
+  url       String
+  createdAt DateTime @default(now())
+}
+
+model MessageConversation {
+  id        String    @id @default(cuid())
+  user      User      @relation(fields: [userId], references: [id])
+  userId    String
+  platform  Platform
+  platformConversationId String
+  lastMessageAt DateTime?
+  unreadCount Int       @default(0)
+  messages   Message[]
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  @@unique([platform, platformConversationId])
+}
+
+model Message {
+  id            String   @id @default(cuid())
+  conversation  MessageConversation @relation(fields: [conversationId], references: [id])
+  conversationId String
+  sender        String
+  body          String
+  sentAt        DateTime
+  isRead        Boolean  @default(false)
+  createdAt     DateTime @default(now())
+}
+
+model MessageTemplate {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  title     String
+  body      String
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+  @@unique([userId, title])
+}
+
+model StatsView {
+  id        String   @id @default(cuid())
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  listingId String
+  timestamp DateTime
+  count     Int
+}
+
+model StatsSale {
+  id        String   @id @default(cuid())
+  listing   Listing  @relation(fields: [listingId], references: [id])
+  listingId String
+  timestamp DateTime
+  count     Int
+}
+
+model Report {
+  id         String   @id @default(cuid())
+  user       User     @relation(fields: [userId], references: [id])
+  userId     String
+  type       ReportType
+  rangeStart DateTime
+  rangeEnd   DateTime
+  status     ReportStatus @default(PENDING)
+  filePath   String?
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
+}
+
+enum ReportType {
+  CSV
+  PDF
+}
+
+enum ReportStatus {
+  PENDING
+  PROCESSING
+  READY
+  FAILED
+}
+
+model AuditLog {
+  id        String   @id @default(cuid())
+  userId    String?
+  entity    String
+  entityId  String?
+  action    String
+  diff      Json?
+  createdAt DateTime @default(now())
+}
+
+model DeviceToken {
+  id        String   @id @default(cuid())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    String
+  token     String   @unique
+  createdAt DateTime @default(now())
+}
+
+model JwtKey {
+  id        String   @id @default(cuid())
+  kid       String   @unique
+  publicPem String
+  privatePem String
+  active    Boolean  @default(true)
+  createdAt DateTime @default(now())
+}
