@@ -14,6 +14,12 @@ Next Steps:
 4. Integrate biometric login unlocking tokens
 5. Add proper notifications channel & rendering
 
+//zmieniłem sobie agp = "8.8.0" w libs.versions.toml
+i w build.gradle.kts
+//    compileSdk {
+//        version = release(36)
+//    }
+    compileSdk = 36
 
 docker-compose up
 (cd) server
