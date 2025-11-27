@@ -1,31 +1,83 @@
-package com.example.inzynierkaallegroolx.ui.screens
-
-import androidx.compose.foundation.layout.Column
-import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.example.inzynierkaallegroolx.ui.components.AppTopBar
 import com.example.inzynierkaallegroolx.viewmodel.ListingEditViewModel
 
 @Composable
-fun ListingEditScreen(onDone: () -> Unit, vm: ListingEditViewModel = viewModel()) {
-    var title by remember { mutableStateOf("") }
-    var description by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("0.0") }
+fun ListingEditScreen(
+    navController: NavController,
+    listingId: String,
+    vm: ListingEditViewModel = viewModel()
+) {
     val state by vm.state.collectAsState()
 
-    Column(Modifier.padding(16.dp)) {
-        Text("New Listing")
-        OutlinedTextField(title, { title = it }, label = { Text("Title") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(description, { description = it }, label = { Text("Description") }, modifier = Modifier.fillMaxWidth())
-        OutlinedTextField(price, { price = it }, label = { Text("Price") }, modifier = Modifier.fillMaxWidth())
-        Button(onClick = { vm.create(title, description, price.toDoubleOrNull() ?: 0.0) }, enabled = !state.loading) { Text("Create") }
-        if (state.success) onDone()
-        state.error?.let { Text("Error: $it") }
+    //załaduj dane przy wejściu
+    LaunchedEffect(listingId) {
+        vm.loadListing(listingId)
+    }
+
+    //po sukcesie cofnij
+    LaunchedEffect(state.isSuccess) {
+        if (state.isSuccess) navController.popBackStack()
+    }
+
+    Scaffold(
+        topBar = { AppTopBar("Edytuj Ogłoszenie", navController, showBackArrow = true, showAvatar = false) }
+    ) { padding ->
+        if (state.isLoading) {
+            Box(Modifier.fillMaxSize(), contentAlignment = androidx.compose.ui.Alignment.Center) {
+                CircularProgressIndicator()
+            }
+        } else {
+            Column(
+                modifier = Modifier
+                    .padding(padding)
+                    .verticalScroll(rememberScrollState())
+                    .padding(16.dp)
+            ) {
+                OutlinedTextField(
+                    value = state.title,
+                    onValueChange = { vm.onTitleChange(it) },
+                    label = { Text("Tytuł") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = state.price,
+                    onValueChange = { vm.onPriceChange(it) },
+                    label = { Text("Cena") },
+                    modifier = Modifier.fillMaxWidth()
+                )
+                Spacer(modifier = Modifier.height(12.dp))
+
+                OutlinedTextField(
+                    value = state.description,
+                    onValueChange = { vm.onDescChange(it) },
+                    label = { Text("Opis") },
+                    modifier = Modifier.fillMaxWidth().height(150.dp)
+                )
+
+                if (state.error != null) {
+                    Text(state.error!!, color = MaterialTheme.colorScheme.error)
+                }
+
+                Spacer(modifier = Modifier.height(24.dp))
+
+                Button(
+                    onClick = { vm.saveChanges() },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Text("Zapisz zmiany")
+                }
+            }
+        }
     }
 }

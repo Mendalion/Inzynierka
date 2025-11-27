@@ -1,3 +1,4 @@
+// mobileApp/app/src/main/java/com/example/inzynierkaallegroolx/viewmodel/AuthViewModel.kt
 package com.example.inzynierkaallegroolx.viewmodel
 
 import android.app.Application
@@ -24,22 +25,51 @@ class AuthViewModel(app: Application): AndroidViewModel(app) {
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             val result = repo.login(email, password)
-            _state.value = if (result.isSuccess) AuthState(loading = false, loggedIn = true, userId = store.userId()) else AuthState(error = result.exceptionOrNull()?.message)
+            handleAuthResult(result)
+        }
+    }
+
+    fun register(email: String, password: String, name: String) {
+        _state.value = _state.value.copy(loading = true, error = null)
+        viewModelScope.launch {
+            val result = repo.register(email, password, name)
+            handleAuthResult(result)
         }
     }
 
     fun refresh() {
         viewModelScope.launch {
-            repo.refresh().onFailure { _state.value = _state.value.copy(error = it.message) }
-            if (store.access()!=null) _state.value = _state.value.copy(loggedIn = true, userId = store.userId())
+            //Ignorujemy błąd przy refreshu, po prostu nie loguje
+            repo.refresh()
+            if (store.access() != null) {
+                _state.value = _state.value.copy(loggedIn = true, userId = store.userId())
+            }
         }
     }
 
-    fun biometricLogin(userId: String) {
+    fun biometricLogin() {
+        //Pobieramy ID z lokalnego storage (ostatni zalogowany użytkownik)
+        val userId = store.userId()
+
+        if (userId == null) {
+            _state.value = _state.value.copy(error = "Zaloguj się najpierw hasłem, aby aktywować biometrię.")
+            return
+        }
+
         _state.value = _state.value.copy(loading = true, error = null)
         viewModelScope.launch {
             val result = repo.biometric(userId)
-            _state.value = if (result.isSuccess) AuthState(loading = false, loggedIn = true, userId = store.userId()) else AuthState(error = result.exceptionOrNull()?.message)
+            handleAuthResult(result)
+        }
+    }
+
+    //Wspólna obsługa wyniku logowania/rejestracji
+    private fun handleAuthResult(result: Result<Unit>) {
+        if (result.isSuccess) {
+            _state.value = AuthState(loading = false, loggedIn = true, userId = store.userId())
+        } else {
+            val msg = result.exceptionOrNull()?.message ?: "Błąd autoryzacji"
+            _state.value = AuthState(loading = false, error = msg)
         }
     }
 }

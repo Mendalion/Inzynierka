@@ -1,6 +1,8 @@
 package com.example.inzynierkaallegroolx.network
 
+import com.example.inzynierkaallegroolx.Config
 import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
 import okhttp3.Interceptor
 import okhttp3.OkHttpClient
 import okhttp3.logging.HttpLoggingInterceptor
@@ -43,11 +45,19 @@ interface UserApi {
 data class UserMeDto(val id: String, val email: String, val name: String?, val phone: String?)
 data class UserUpdateBody(val name: String?, val phone: String?)
 
+
+
 object ApiClient {
     private var tokenProvider: (() -> String?)? = null
+
     fun setTokenProvider(provider: () -> String?) { tokenProvider = provider }
 
-    private val moshi = Moshi.Builder().build()
+
+//    private val moshi = Moshi.Builder().build()
+    private val moshi = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+
     private val client = OkHttpClient.Builder()
         .addInterceptor(HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY))
         .addInterceptor(Interceptor { chain ->
@@ -59,7 +69,7 @@ object ApiClient {
         .build()
 
     private val retrofit = Retrofit.Builder()
-        .baseUrl("http://10.0.2.2:4000/")
+        .baseUrl(Config.BASE_URL)
         .addConverterFactory(MoshiConverterFactory.create(moshi))
         .client(client)
         .build()

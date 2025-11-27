@@ -1,42 +1,141 @@
-package com.example.inzynierkaallegroolx.ui.screens
-
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.material3.Button
-import androidx.compose.material3.CircularProgressIndicator
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
-import androidx.compose.runtime.collectAsState
-import androidx.compose.runtime.getValue
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Search
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.example.inzynierkaallegroolx.ui.Routes
-import com.example.inzynierkaallegroolx.viewmodel.ListingsViewModel
 import androidx.navigation.NavController
-import androidx.navigation.compose.rememberNavController
+import com.example.inzynierkaallegroolx.network.ListingDto
+import com.example.inzynierkaallegroolx.ui.components.AppBottomBar
+import com.example.inzynierkaallegroolx.ui.components.AppTopBar
+import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
+import com.example.inzynierkaallegroolx.ui.navigation.Screen
+import com.example.inzynierkaallegroolx.viewmodel.ListingsViewModel
+
+//import com.example.inzynierkaallegroolx.viewmodel.ListingsViewModel
 
 @Composable
-fun ListingsScreen(vm: ListingsViewModel = viewModel(), navController: NavController? = null) {
+fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewModel()) {
     val state by vm.state.collectAsState()
-    val nav = navController ?: rememberNavController()
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row {
-            Button(onClick = { nav.navigate(Routes.LISTING_EDIT) }) { Text("New Listing") }
-            Button(onClick = { nav.navigate(Routes.MESSAGES) }) { Text("Messages") }
-            Button(onClick = { nav.navigate(Routes.TEMPLATES) }) { Text("Templates") }
-            Button(onClick = { nav.navigate(Routes.PROFILE) }) { Text("Profile") }
-            Button(onClick = { nav.navigate(Routes.REPORTS) }) { Text("Reports") }
-            if (state.items.firstOrNull() != null) Button(onClick = { nav.navigate(Routes.STATS + "/" + state.items.first().id) }) { Text("Stats") }
+
+    Scaffold(
+        topBar = { AppTopBar("Twoje Ogłoszenia", navController) },
+        bottomBar = { AppBottomBar(navController) }
+    ) { padding ->
+        Column(
+            modifier = Modifier
+                .padding(padding)
+                .fillMaxSize()
+                .padding(16.dp)
+        ) {
+            // Pasek wyszukiwania
+            OutlinedTextField(
+                value = state.searchQuery,
+                onValueChange = { vm.onSearchQueryChange(it) },
+                label = { Text("Szukaj ogłoszeń...") },
+                modifier = Modifier.fillMaxWidth(),
+                leadingIcon = { Icon(Icons.Default.Search, null) },
+                singleLine = true
+            )
+
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Filtry (Chips)
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                FilterChip(
+                    selected = state.filterPlatform == "ALL",
+                    onClick = { vm.onFilterChange("ALL") },
+                    label = { Text("Wszystkie") }
+                )
+                FilterChip(
+                    selected = state.filterPlatform == "ALLEGRO",
+                    onClick = { vm.onFilterChange("ALLEGRO") },
+                    label = { Text("Allegro") }
+                )
+                FilterChip(
+                    selected = state.filterPlatform == "OLX",
+                    onClick = { vm.onFilterChange("OLX") },
+                    label = { Text("OLX") }
+                )
+            }
+
+            Spacer(modifier = Modifier.height(16.dp))
+
+            if (state.isLoading) {
+                Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            } else if (state.error != null) {
+                Text("Błąd: ${state.error}", color = MaterialTheme.colorScheme.error)
+            } else {
+                //Lista Przewijana
+                LazyColumn(
+                    verticalArrangement = Arrangement.spacedBy(12.dp),
+                    modifier = Modifier.fillMaxSize()
+                ) {
+                    items(state.filteredListings) { listing ->
+                        ListingItemCard(
+                            listing = listing,
+                            onEditClick = {
+                                //Przekierowanie do edycji z ID
+                                navController.navigate("listing/edit/${listing.id}")
+                            },
+                            onDeleteClick = { vm.deleteListing(listing.id) }
+                        )
+                    }
+                }
+            }
         }
-        if (state.loading) CircularProgressIndicator() else ListingsList(state.items)
     }
 }
 
 @Composable
-fun ListingsList(items: List<ListingItemUi>) {
-    LazyColumn { items(items) { Text(it.title + " - " + it.price) } }
-}
+fun ListingItemCard(listing: ListingItemUi, onEditClick: () -> Unit, onDeleteClick: () -> Unit) {
+    Card(
+        elevation = CardDefaults.cardElevation(4.dp),
+        shape = RoundedCornerShape(12.dp),
+        modifier = Modifier.fillMaxWidth()
+    ) {
+        Row(
+            modifier = Modifier
+                .padding(12.dp)
+                .fillMaxWidth(),
+            verticalAlignment = Alignment.CenterVertically
+        ) {
+            //Placeholder na zdjęcie
+            Box(
+                modifier = Modifier
+                    .size(60.dp)
+                    .background(Color.Gray.copy(alpha = 0.2f), RoundedCornerShape(8.dp))
+            )
 
-data class ListingItemUi(val id: String, val title: String, val price: String)
+            Spacer(modifier = Modifier.width(12.dp))
+
+            Column(modifier = Modifier.weight(1f)) {
+                Text(listing.title, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text("${listing.price} PLN", style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.primary)
+                Text(listing.status ?: "UNKNOWN", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+            }
+
+            //Ikony akcji
+            IconButton(onClick = onEditClick) {
+                Icon(Icons.Default.Edit, contentDescription = "Edytuj", tint = Color.Blue)
+            }
+            IconButton(onClick = onDeleteClick) {
+                Icon(Icons.Default.Delete, contentDescription = "Usuń", tint = Color.Red)
+            }
+        }
+    }
+}

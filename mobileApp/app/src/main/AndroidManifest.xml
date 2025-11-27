@@ -1,7 +1,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android" package="com.example.inzynierkaallegroolx">
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
-    <application android:name="com.example.inzynierkaallegroolx.MainApplication" android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:theme="@style/Theme.Material3.DayNight">
+    <application android:name="com.example.inzynierkaallegroolx.MainApplication" android:allowBackup="true" android:icon="@mipmap/ic_launcher" android:label="@string/app_name" android:theme="@style/Theme.Material3.DayNight" android:usesCleartextTraffic="true">
         <activity android:name="com.example.inzynierkaallegroolx.MainActivity" android:exported="true">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />

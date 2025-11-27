@@ -11,18 +11,38 @@ import com.example.inzynierkaallegroolx.data.messages.MessageEntity
 import com.example.inzynierkaallegroolx.data.messages.MessageTemplateEntity
 import com.example.inzynierkaallegroolx.data.messages.MessagesDao
 
-@Database(entities = [ListingEntity::class, ConversationEntity::class, MessageEntity::class, MessageTemplateEntity::class], version = 2)
-abstract class AppDatabase: RoomDatabase() {
-    abstract fun listings(): ListingDao
-    abstract fun messages(): MessagesDao
+@Database(
+    entities = [
+        ListingEntity::class,
+        ConversationEntity::class,
+        MessageEntity::class,
+        MessageTemplateEntity::class
+        // AuthState zazwyczaj nie jest encją Room, chyba że tak zdefiniowałeś
+    ],
+    version = 1,
+    exportSchema = false
+)
+abstract class AppDatabase : RoomDatabase() {
+    abstract fun listingDao(): ListingDao
+//    abstract fun conversationDao(): MessagesDao
+    abstract fun messageDao(): MessagesDao
 
     companion object {
-        @Volatile private var INSTANCE: AppDatabase? = null
-        fun get(context: Context): AppDatabase = INSTANCE ?: synchronized(this) {
-            INSTANCE ?: Room.databaseBuilder(context, AppDatabase::class.java, "app.db")
-                .fallbackToDestructiveMigration()
-                .build()
-                .also { INSTANCE = it }
+        @Volatile
+        private var INSTANCE: AppDatabase? = null
+
+        fun getDatabase(context: Context): AppDatabase {
+            return INSTANCE ?: synchronized(this) {
+                val instance = Room.databaseBuilder(
+                    context.applicationContext,
+                    AppDatabase::class.java,
+                    "app_database"
+                )
+                    .fallbackToDestructiveMigration() //dla bezpieczeństwa w dev
+                    .build()
+                INSTANCE = instance
+                instance
+            }
         }
     }
 }

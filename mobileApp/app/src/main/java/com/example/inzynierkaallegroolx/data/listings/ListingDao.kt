@@ -8,8 +8,14 @@ import androidx.room.Query
 @Dao
 interface ListingDao {
     @Query("SELECT * FROM listings")
-    suspend fun all(): List<ListingEntity>
+    suspend fun getAll(): List<ListingEntity>
+
+    @Query("SELECT * FROM listings")
+    fun observeAll(): kotlinx.coroutines.flow.Flow<List<ListingEntity>>
 
     @Insert(onConflict = OnConflictStrategy.REPLACE)
-    suspend fun upsertAll(list: List<ListingEntity>)
+    suspend fun upsertAll(listings: List<ListingEntity>)
+
+    @Query("DELETE FROM listings")
+    suspend fun clearAll()
 }

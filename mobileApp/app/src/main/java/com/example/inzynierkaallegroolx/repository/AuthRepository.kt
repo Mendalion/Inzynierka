@@ -5,10 +5,19 @@ import com.example.inzynierkaallegroolx.network.ApiClient
 import com.example.inzynierkaallegroolx.network.Credentials
 import com.example.inzynierkaallegroolx.network.RefreshBody
 import com.example.inzynierkaallegroolx.network.BiometricLoginBody
+import com.example.inzynierkaallegroolx.network.RegisterBody
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class AuthRepository(private val store: EncryptedTokenStore) {
+    suspend fun register(email: String, password: String, name: String): Result<Unit> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val resp = ApiClient.auth.register(RegisterBody(email, password, name))
+            store.saveAll(resp.accessToken, resp.refreshToken, resp.user?.id)
+            Result.success(Unit)
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
     suspend fun login(email: String, password: String): Result<Unit> = withContext(Dispatchers.IO) {
         return@withContext try {
             val resp = ApiClient.auth.login(Credentials(email, password))
@@ -37,4 +46,6 @@ class AuthRepository(private val store: EncryptedTokenStore) {
     fun isLoggedIn() = store.access() != null
 
     fun logout() { store.clear() }
+
+    fun getStoredUserId() = store.userId()
 }
