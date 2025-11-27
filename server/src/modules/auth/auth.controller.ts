@@ -1,8 +1,7 @@
 // server/modules/auth/auth.controller.ts
 import { Router } from 'express';
 import { z } from 'zod';
-import { login, register, issueTokensInternal } from './auth.service.js';
-
+import { login, register, issueTokensInternal, refresh } from './auth.service.js';
 const router = Router();
 
 const registerSchema = z.object({
@@ -15,6 +14,10 @@ const loginSchema = z.object({
   email: z.string().email(),
   password: z.string()
 });
+
+const refreshSchema = z.object({
+  refreshToken: z.string()
+})
 
 router.post('/register', async (req, res) => {
   try {
@@ -33,6 +36,16 @@ router.post('/login', async (req, res) => {
     res.json(result);
   } catch (e: any) {
     res.status(401).json({ error: e.message || 'LOGIN_FAILED' });
+  }
+});
+
+router.post('/refresh', async (req, res) => {
+  try {
+    const data = refreshSchema.parse(req.body);
+    const result = await refresh(data.refreshToken);
+    res.json(result);
+  } catch (e: any) {
+    res.status(401).json({ error: e.message || 'REFRESH_FAILED' });
   }
 });
 

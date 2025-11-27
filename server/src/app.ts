@@ -20,6 +20,7 @@ import { reportsController } from './modules/reports/reports.controller.js';
 import { statsController } from './modules/stats/stats.controller.js';
 import { ingestController } from './modules/stats/ingest.controller.js';
 import { downloadController } from './modules/reports/download.controller.js';
+import { archiveController } from './modules/listings/archive.controller.js';
 
 export function createApp() {
   const app = express();
@@ -47,7 +48,7 @@ export function createApp() {
 
   app.use('/listings', imageController);
   app.use('/listings', statusController);
-  app.use('/reports', reportsController);
+  app.use('/listings', archiveController);
   app.use('/stats', statsController);
   app.use('/ingest', ingestController);
   app.use('/reports', reportsController);

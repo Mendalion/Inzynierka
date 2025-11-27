@@ -23,6 +23,7 @@ i w build.gradle.kts
 
 docker-compose up
 (cd) server
+    (jednorazowo)nmp install
     npm run prisma:migrate
     npm run dev  
     npx tsx src/test_full.ts //testy

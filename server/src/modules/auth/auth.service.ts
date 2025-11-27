@@ -31,6 +31,32 @@ export async function login(email: string, password: string) {
   return issueTokensInternal(user.id);
 }
 
+export async function refresh(refreshToken: string) {
+  let payload: any;
+  try {
+    payload = jwt.verify(refreshToken, env.JWT_REFRESH_SECRET);
+  } catch (e) {
+    throw new Error('INVALID_TOKEN');
+  }
+
+  if (payload.type !== 'refresh') throw new Error('INVALID_TOKEN_TYPE');
+
+  //sprawdzenie czy token istnieje w bazie
+  const storedToken = await prisma.refreshToken.findUnique({ where: { token: refreshToken } });
+  if (!storedToken) throw new Error('TOKEN_REVOKED');
+
+  //sprawdzenie daty ważności w bazie
+  if (storedToken.expiresAt < new Date()) {
+    await prisma.refreshToken.delete({ where: { token: refreshToken } });
+    throw new Error('TOKEN_EXPIRED');
+  }
+
+  //usuwamy stary, wydajemy nowe
+  await prisma.refreshToken.delete({ where: { token: refreshToken } });
+  
+  return issueTokensInternal(payload.sub);
+}
+
 // Funkcja wewnętrzna, eksportowana również dla kontrolera biometrii
 export async function issueTokensInternal(userId: string) {
   // Upewnij się, że mamy klucz do podpisywania

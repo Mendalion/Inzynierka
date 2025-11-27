@@ -11,6 +11,62 @@ const replySchema = z.object({
   body: z.string().min(1)
 });
 
+const templateSchema = z.object({
+  title: z.string().min(1),
+  body: z.string().min(1)
+});
+
+router.get('/unread/count', authMiddleware, async (req, res) => {
+  const userId = req.userId!;
+  try {
+    const conversations = await prisma.messageConversation.findMany({
+        where: { userId },
+        select: { id: true }
+    });
+    const convIds = conversations.map(c => c.id);
+    
+    const count = await prisma.message.count({
+        where: {
+            conversationId: { in: convIds },
+            sender: { not: 'ME' },
+            isRead: false
+        }
+    });
+    res.json({ unread: count });
+  } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.get('/templates', authMiddleware, async (req, res) => {
+    const userId = req.userId!;
+    try {
+        const templates = await prisma.messageTemplate.findMany({ where: { userId } });
+        res.json(templates.map(t => ({ id: t.id, title: t.title, body: t.body }))); 
+    } catch (e: any) { res.status(500).json({ error: e.message }); }
+});
+
+router.post('/templates', authMiddleware, async (req, res) => {
+    const userId = req.userId!;
+    try {
+        const data = templateSchema.parse(req.body);
+        const t = await prisma.messageTemplate.create({
+            data: { userId, title: data.title, body: data.body } 
+        });
+        res.json({ id: t.id, title: t.title, body: t.body });
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+router.delete('/templates/:id', authMiddleware, async (req, res) => {
+    const userId = req.userId!;
+    const id = req.params.id;
+    try {
+        const t = await prisma.messageTemplate.findUnique({ where: { id }});
+        if (!t || t.userId !== userId) return res.status(403).json({ error: 'FORBIDDEN' });
+        
+        await prisma.messageTemplate.delete({ where: { id } });
+        res.json({ ok: true });
+    } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
 //Pobierz listę konwersacji
 router.get('/conversations', authMiddleware, async (req, res) => {
   const userId = req.userId!;

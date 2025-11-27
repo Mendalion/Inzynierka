@@ -4,8 +4,7 @@ import { prisma } from '../../db/prisma.js';
 
 if (!admin.apps.length) {
   try {
-    // In real usage use service account JSON from env or file
-    admin.initializeApp({ credential: admin.applicationDefault() });
+    admin.initializeApp({ credential: admin.credential.applicationDefault() }); 
   } catch (e) {
     console.warn('FCM init failed (missing credentials)', e);
   }

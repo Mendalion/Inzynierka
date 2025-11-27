@@ -16,8 +16,8 @@ import retrofit2.http.PATCH
 interface StatsApi {
     @GET("stats/listings/views") suspend fun views(@Query("listingId") listingId: String): ViewsResponse
     @GET("stats/listings/sales") suspend fun sales(@Query("listingId") listingId: String): SalesResponse
-    @POST("stats/view") suspend fun ingestView(@Body body: IngestBody): Map<String, Any>
-    @POST("stats/sale") suspend fun ingestSale(@Body body: IngestBody): Map<String, Any>
+    @POST("ingest/view") suspend fun ingestView(@Body body: IngestBody): Map<String, Any>
+    @POST("ingest/sale") suspend fun ingestSale(@Body body: IngestBody): Map<String, Any>
 }
 
 data class ViewsResponse(val listingId: String, val views: List<ViewPoint>)
