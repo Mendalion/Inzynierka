@@ -5,7 +5,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.inzynierkaallegroolx.data.AppDatabase
 import com.example.inzynierkaallegroolx.repository.ListingsLocalRepository
-import com.example.inzynierkaallegroolx.repository.MessagesRepository
+//import com.example.inzynierkaallegroolx.repository.MessagesRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow

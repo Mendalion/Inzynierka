@@ -6,17 +6,17 @@ import androidx.room.Room
 import androidx.room.RoomDatabase
 import com.example.inzynierkaallegroolx.data.listings.ListingDao
 import com.example.inzynierkaallegroolx.data.listings.ListingEntity
-import com.example.inzynierkaallegroolx.data.messages.ConversationEntity
-import com.example.inzynierkaallegroolx.data.messages.MessageEntity
-import com.example.inzynierkaallegroolx.data.messages.MessageTemplateEntity
-import com.example.inzynierkaallegroolx.data.messages.MessagesDao
+//import com.example.inzynierkaallegroolx.data.messages.ConversationEntity
+//import com.example.inzynierkaallegroolx.data.messages.MessageEntity
+//import com.example.inzynierkaallegroolx.data.messages.MessageTemplateEntity
+//import com.example.inzynierkaallegroolx.data.messages.MessagesDao
 
 @Database(
     entities = [
         ListingEntity::class,
-        ConversationEntity::class,
-        MessageEntity::class,
-        MessageTemplateEntity::class
+//        ConversationEntity::class,
+//        MessageEntity::class,
+//        MessageTemplateEntity::class
         // AuthState zazwyczaj nie jest encją Room, chyba że tak zdefiniowałeś
     ],
     version = 1,
@@ -24,8 +24,8 @@ import com.example.inzynierkaallegroolx.data.messages.MessagesDao
 )
 abstract class AppDatabase : RoomDatabase() {
     abstract fun listingDao(): ListingDao
-//    abstract fun conversationDao(): MessagesDao
-    abstract fun messageDao(): MessagesDao
+//    abstract fun conversationDao(): MessagesDao do usuniecia
+//    abstract fun messageDao(): MessagesDao
 
     companion object {
         @Volatile

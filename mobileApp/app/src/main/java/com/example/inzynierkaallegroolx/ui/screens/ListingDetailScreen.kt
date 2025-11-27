@@ -1,39 +1,100 @@
 package com.example.inzynierkaallegroolx.ui.screens
 
 import androidx.compose.foundation.layout.*
-import androidx.compose.material3.Button
-import androidx.compose.material3.OutlinedTextField
-import androidx.compose.material3.Text
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowBack
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material3.*
 import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
-import com.example.inzynierkaallegroolx.network.ApiClient
-import com.example.inzynierkaallegroolx.network.IngestBody
-import com.example.inzynierkaallegroolx.network.ListingUpdateBody
-import kotlinx.coroutines.launch
+import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.navigation.NavController
+import com.example.inzynierkaallegroolx.ui.screens.components.ErrorText
+import com.example.inzynierkaallegroolx.ui.screens.components.LoadingBox
+import com.example.inzynierkaallegroolx.viewmodel.ListingDetailViewModel
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun ListingDetailScreen(id: String) {
-    val scope = rememberCoroutineScope()
-    var title by remember { mutableStateOf("") }
-    var desc by remember { mutableStateOf("") }
-    var price by remember { mutableStateOf("") }
-    LaunchedEffect(id) {
-        val l = runCatching { ApiClient.listings.get(id) }.getOrNull()
-        l?.let { title = it.title; desc = it.description; price = it.price }
-        runCatching { ApiClient.stats.ingestView(IngestBody(id)) }
+fun ListingDetailScreen(
+    navController: NavController,
+    viewModel: ListingDetailViewModel = viewModel()
+) {
+    val state by viewModel.state.collectAsState()
+
+    //Obsługa usunięcia - cofnij do listy
+    LaunchedEffect(state.isDeleted) {
+        if (state.isDeleted) {
+            navController.popBackStack()
+        }
     }
-    Column(Modifier.padding(16.dp)) {
-        Text("Listing detail $id")
-        OutlinedTextField(value = title, onValueChange = { title = it }, label = { Text("Title") })
-        OutlinedTextField(value = desc, onValueChange = { desc = it }, label = { Text("Description") })
-        OutlinedTextField(value = price, onValueChange = { price = it }, label = { Text("Price") })
-        Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-            Button(onClick = { scope.launch { runCatching { ApiClient.listings.update(id, ListingUpdateBody(title, desc, price.toDoubleOrNull())) } } }) { Text("Save") }
-            Button(onClick = { scope.launch { runCatching { ApiClient.listings.archive(id) } } }) { Text("Archive") }
-            Button(onClick = { scope.launch { runCatching { ApiClient.listings.delete(id) } } }) { Text("Delete") }
-            Button(onClick = { scope.launch { runCatching { ApiClient.stats.ingestView(IngestBody(id)) } } }) { Text("Mark View") }
-            Button(onClick = { scope.launch { runCatching { ApiClient.stats.ingestSale(IngestBody(id)) } } }) { Text("Mark Sale") }
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("Szczegóły ogłoszenia") },
+                navigationIcon = {
+                    IconButton(onClick = { navController.popBackStack() }) {
+                        Icon(Icons.Default.ArrowBack, contentDescription = "Wróć")
+                    }
+                },
+                actions = {
+                    // Przycisk edycji
+                    state.listing?.let { listing ->
+                        IconButton(onClick = { navController.navigate("listing/edit/${listing.id}") }) {
+                            Icon(Icons.Default.Edit, contentDescription = "Edytuj")
+                        }
+                    }
+                    // Przycisk usuwania
+                    IconButton(onClick = { viewModel.deleteListing() }) {
+                        Icon(Icons.Default.Delete, contentDescription = "Usuń", tint = Color.Red)
+                    }
+                }
+            )
+        }
+    ) { padding ->
+        Box(modifier = Modifier.padding(padding).fillMaxSize()) {
+            if (state.isLoading) {
+                LoadingBox()
+            } else if (state.error != null) {
+                ErrorText(error = state.error!!, onRetry = { viewModel.loadListing() })
+            } else {
+                state.listing?.let { listing ->
+                    Column(
+                        modifier = Modifier
+                            .fillMaxSize()
+                            .padding(16.dp),
+                        verticalArrangement = Arrangement.spacedBy(16.dp)
+                    ) {
+                        Text(
+                            text = listing.title,
+                            style = MaterialTheme.typography.headlineMedium
+                        )
+                        Card(
+                            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
+                            modifier = Modifier.fillMaxWidth()
+                        ) {
+                            Column(Modifier.padding(16.dp)) {
+                                Text(
+                                    text = "Cena: ${listing.price} PLN",
+                                    style = MaterialTheme.typography.titleLarge,
+                                    color = MaterialTheme.colorScheme.primary
+                                )
+                                Spacer(modifier = Modifier.height(8.dp))
+                                Text(text = "Status: ${listing.status}")
+                                Text(text = "Platforma: ${listing.platform}")
+                            }
+                        }
+
+                        Text(text = "Opis", style = MaterialTheme.typography.titleMedium)
+                        // Tutaj w przyszłości pełny opis pobierany z detali
+                        Text(text = "Brak szczegółowego opisu w widoku listy (dane przychodzą z mappera).", style = MaterialTheme.typography.bodyMedium)
+                    }
+                }
+            }
         }
     }
 }

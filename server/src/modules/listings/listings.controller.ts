@@ -84,4 +84,20 @@ router.patch('/:id', authMiddleware, async (req, res) => {
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
+router.delete('/:id', authMiddleware, async (req, res) => {
+    try {
+        const userId = req.userId!;
+        const id = req.params.id;
+        const listing = await prisma.listing.findUnique({ where: { id } });
+
+        if (!listing) return res.status(404).json({ error: 'NOT_FOUND' });
+        if (listing.userId !== userId) return res.status(403).json({ error: 'FORBIDDEN' });
+
+        await prisma.listing.delete({ where: { id } });
+        res.json({ success: true });
+    } catch (e: any) {
+        res.status(400).json({ error: e.message });
+    }
+});
+
 export const listingsController = router;

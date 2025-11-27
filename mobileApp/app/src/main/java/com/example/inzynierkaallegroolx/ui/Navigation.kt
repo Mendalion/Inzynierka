@@ -19,10 +19,10 @@ import com.example.inzynierkaallegroolx.ui.navigation.Screen
 import com.example.inzynierkaallegroolx.ui.screens.LoginScreen
 //import com.example.inzynierkaallegroolx.ui.screens.ListingsScreen
 //import com.example.inzynierkaallegroolx.ui.screens.ListingEditScreen
-import com.example.inzynierkaallegroolx.ui.screens.MessagesScreen
-import com.example.inzynierkaallegroolx.ui.screens.ConversationDetailScreen
+//import com.example.inzynierkaallegroolx.ui.screens.MessagesScreen
+//import com.example.inzynierkaallegroolx.ui.screens.ConversationDetailScreen
 import com.example.inzynierkaallegroolx.ui.screens.HomeScreen
-import com.example.inzynierkaallegroolx.ui.screens.TemplatesScreen
+//import com.example.inzynierkaallegroolx.ui.screens.TemplatesScreen
 import com.example.inzynierkaallegroolx.ui.screens.ProfileScreen
 import com.example.inzynierkaallegroolx.ui.screens.StatsScreen
 import com.example.inzynierkaallegroolx.ui.screens.ReportsScreen
@@ -69,6 +69,9 @@ fun AppNavigation(
             val id = backStackEntry.arguments?.getString("id") ?: return@composable
             ListingEditScreen(navController, id)
         }
+        composable("listing/detail/{id}") { backStackEntry ->
+            com.example.inzynierkaallegroolx.ui.screens.ListingDetailScreen(navController)
+        }
 
         composable(Screen.Listings.route) {
             ListingsScreen(navController)
@@ -76,6 +79,7 @@ fun AppNavigation(
         composable(Screen.Messages.route) {
             Text("Wiadomości - TODO")
         }
+
         composable(Screen.Stats.route) {
             Text("Statystyki - TODO")
         }

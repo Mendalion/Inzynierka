@@ -4,12 +4,11 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.inzynierkaallegroolx.network.ApiClient
-import com.example.inzynierkaallegroolx.network.ListingUpdateBody // Musisz stworzyć to DTO w AuthApi/ListingApi
+import com.example.inzynierkaallegroolx.network.ListingUpdateBody
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
 
-// Stan jest taki sam jak w dodawaniu
 data class ListingEditState(
     val id: String = "",
     val title: String = "",
@@ -32,6 +31,7 @@ class ListingEditViewModel(app: Application) : AndroidViewModel(app) {
                     id = listing.id,
                     title = listing.title,
                     description = listing.description ?: "",
+                    // ListingDto.price jest Stringiem (np. "123.00"), więc przypisujemy bezpośrednio
                     price = listing.price ?: "",
                     isLoading = false
                 )
@@ -43,14 +43,34 @@ class ListingEditViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onTitleChange(v: String) { _state.value = _state.value.copy(title = v) }
     fun onDescChange(v: String) { _state.value = _state.value.copy(description = v) }
-    fun onPriceChange(v: String) { _state.value = _state.value.copy(price = v) }
+    // Walidacja wprowadzania (tylko cyfry, kropka, przecinek) - opcjonalnie
+    fun onPriceChange(v: String) {
+        if (v.all { it.isDigit() || it == '.' || it == ',' }) {
+            _state.value = _state.value.copy(price = v)
+        }
+    }
 
     fun saveChanges() {
         val s = _state.value
+
+        val priceDouble = s.price.replace(',', '.').toDoubleOrNull()
+
+        if (priceDouble == null) {
+            _state.value = s.copy(error = "Niepoprawny format ceny")
+            return
+        }
+
         viewModelScope.launch {
-            _state.value = s.copy(isLoading = true)
+            _state.value = s.copy(isLoading = true, error = null)
             try {
-                ApiClient.listings.update(s.id, ListingUpdateBody(title = s.title, description = s.description, price = s.price))
+                ApiClient.listings.update(
+                    s.id,
+                    ListingUpdateBody(
+                        title = s.title,
+                        description = s.description,
+                        price = priceDouble // Przekazujemy Double
+                    )
+                )
                 _state.value = s.copy(isLoading = false, isSuccess = true)
             } catch (e: Exception) {
                 _state.value = s.copy(isLoading = false, error = "Błąd zapisu: ${e.message}")

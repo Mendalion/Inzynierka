@@ -13,7 +13,7 @@ import androidx.work.ExistingPeriodicWorkPolicy
 import com.example.inzynierkaallegroolx.work.ListingsSyncWorker
 import com.example.inzynierkaallegroolx.work.MessagesSyncWorker
 import com.example.inzynierkaallegroolx.work.StatsSyncWorker
-import com.example.inzynierkaallegroolx.work.CombinedSyncWorker
+//import com.example.inzynierkaallegroolx.work.CombinedSyncWorker
 import java.util.concurrent.TimeUnit
 
 private const val NOTIFICATION_CHANNEL_ID = "default"
@@ -54,14 +54,14 @@ class MainApplication: Application(), Configuration.Provider {
         val stats = PeriodicWorkRequestBuilder<StatsSyncWorker>(1, TimeUnit.HOURS)
             .setConstraints(constraints)
             .build()
-        val combined = PeriodicWorkRequestBuilder<CombinedSyncWorker>(30, TimeUnit.MINUTES)
-            .setConstraints(constraints)
-            .build()
+//        val combined = PeriodicWorkRequestBuilder<CombinedSyncWorker>(30, TimeUnit.MINUTES)
+//            .setConstraints(constraints)
+//            .build()
         val workManager = WorkManager.getInstance(this)
         workManager.enqueueUniquePeriodicWork(WORK_LISTINGS, ExistingPeriodicWorkPolicy.UPDATE, listings)
         workManager.enqueueUniquePeriodicWork(WORK_MESSAGES, ExistingPeriodicWorkPolicy.UPDATE, messages)
         workManager.enqueueUniquePeriodicWork(WORK_STATS, ExistingPeriodicWorkPolicy.UPDATE, stats)
-        workManager.enqueueUniquePeriodicWork("work_combined_sync", ExistingPeriodicWorkPolicy.UPDATE, combined)
+        //workManager.enqueueUniquePeriodicWork("work_combined_sync", ExistingPeriodicWorkPolicy.UPDATE, combined)
     }
 
     override val workManagerConfiguration: Configuration =
