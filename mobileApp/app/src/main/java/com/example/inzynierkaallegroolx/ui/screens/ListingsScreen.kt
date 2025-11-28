@@ -1,5 +1,4 @@
 import androidx.compose.foundation.background
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -20,15 +19,11 @@ import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.inzynierkaallegroolx.network.ListingDto
 import com.example.inzynierkaallegroolx.ui.components.AppBottomBar
 import com.example.inzynierkaallegroolx.ui.components.AppTopBar
 import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
-import com.example.inzynierkaallegroolx.ui.navigation.Screen
 import com.example.inzynierkaallegroolx.viewmodel.ListingsViewModel
 import com.example.inzynierkaallegroolx.viewmodel.SortOption
-
-//import com.example.inzynierkaallegroolx.viewmodel.ListingsViewModel
 
 @Composable
 fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewModel()) {
@@ -57,7 +52,7 @@ fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewMod
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Pasek wyszukiwania
+            //pasek wyszukiwania
             OutlinedTextField(
                 value = state.searchQuery,
                 onValueChange = { vm.onSearchQueryChange(it) },
@@ -69,13 +64,12 @@ fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewMod
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Filtry i Sortowanie
+            //filtry i sortowanie
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                // Filtry (Chips)
                 Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                     FilterChip(
                         selected = state.filterPlatform == "ALL",
@@ -93,7 +87,6 @@ fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewMod
                         label = { Text("OLX") }
                     )
                 }
-                // Przycisk Sortowania
                 Box {
                     TextButton(onClick = { sortMenuExpanded = true }) {
                         Text("Sortuj")
@@ -143,7 +136,7 @@ fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewMod
             } else if (state.error != null) {
                 Text("Błąd: ${state.error}", color = MaterialTheme.colorScheme.error)
             } else {
-                //Lista Przewijana
+                //lista przewijana
                 LazyColumn(
                     verticalArrangement = Arrangement.spacedBy(12.dp),
                     modifier = Modifier.fillMaxSize()
@@ -152,7 +145,7 @@ fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewMod
                         ListingItemCard(
                             listing = listing,
                             onEditClick = {
-                                //Przekierowanie do edycji z ID
+                                //przekierowanie do edycji ogloszenia
                                 navController.navigate("listing/edit/${listing.id}")
                             },
                             onDeleteClick = { vm.deleteListing(listing.id) }
@@ -192,7 +185,7 @@ fun ListingItemCard(listing: ListingItemUi, onEditClick: () -> Unit, onDeleteCli
                 Text(listing.status ?: "UNKNOWN", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
             }
 
-            //Ikony akcji
+            //ikony akcji
             IconButton(onClick = onEditClick) {
                 Icon(Icons.Default.Edit, contentDescription = "Edytuj", tint = Color.Blue)
             }

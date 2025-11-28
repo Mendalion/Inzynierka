@@ -1,4 +1,5 @@
 import { Router } from 'express';
+import { Platform } from '@prisma/client';
 import { authMiddleware } from '../auth/auth.middleware.js';
 import { prisma } from '../../db/prisma.js';
 import { toConversationDTO, toMessageDTO } from './messages.mapper.js';
@@ -14,6 +15,17 @@ const replySchema = z.object({
 const templateSchema = z.object({
   title: z.string().min(1),
   body: z.string().min(1)
+});
+
+//Do TESTÓW potem usunac
+//Do TESTÓW potem usunac
+//Do TESTÓW potem usunac
+const createInternalSchema = z.object({
+  email: z.string().email(),
+  body: z.string().min(1),
+  sender: z.string().default('SYSTEM'),
+  platform: z.nativeEnum(Platform).default(Platform.ALLEGRO), // Domyślnie Allegro
+  platformConversationId: z.string().optional()
 });
 
 router.get('/unread/count', authMiddleware, async (req, res) => {
@@ -65,6 +77,47 @@ router.delete('/templates/:id', authMiddleware, async (req, res) => {
         await prisma.messageTemplate.delete({ where: { id } });
         res.json({ ok: true });
     } catch (e: any) { res.status(400).json({ error: e.message }); }
+});
+
+//Do TESTÓW potem usunac
+//Do TESTÓW potem usunac
+//Do TESTÓW potem usunac
+router.post('/internal/conversations', async (req, res) => {
+  try {
+    const data = createInternalSchema.parse(req.body);
+    const user = await prisma.user.findUnique({
+        where: { email: data.email }
+    });
+    if (!user) {
+        return res.status(404).json({ error: `Nie znaleziono użytkownika o emailu: ${data.email}` });
+    }
+
+    const mockPlatformId = data.platformConversationId || `MOCK-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;  
+    const conv = await prisma.messageConversation.create({
+      data: {
+        userId: user.id,
+        platform: data.platform,
+        platformConversationId: mockPlatformId,
+        lastMessageAt: new Date(),
+        unreadCount: 1,
+        messages: {
+          create: {
+            sender: data.sender,
+            body: data.body,
+            sentAt: new Date(),
+            isRead: false
+          }
+        }
+      },
+      include: {
+        messages: true
+      }
+    });
+
+    res.json(toConversationDTO(conv));
+  } catch (e: any) {
+    res.status(400).json({ error: e.message });
+  }
 });
 
 //Pobierz listę konwersacji

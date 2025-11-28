@@ -1,5 +1,3 @@
-// plik: mendalion/inzynierka/Inzynierka-refactor-r/mobileApp/app/src/main/java/com/example/inzynierkaallegroolx/ui/screens/ListingDetailScreen.kt
-
 package com.example.inzynierkaallegroolx.ui.screens
 
 import androidx.compose.foundation.layout.*
@@ -14,8 +12,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
-import com.example.inzynierkaallegroolx.ui.screens.components.ErrorText
-import com.example.inzynierkaallegroolx.ui.screens.components.LoadingBox
+import com.example.inzynierkaallegroolx.ui.components.ErrorText
+import com.example.inzynierkaallegroolx.ui.components.LoadingBox
 import com.example.inzynierkaallegroolx.viewmodel.ListingDetailViewModel
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -89,7 +87,6 @@ fun ListingDetailScreen(
 
                         Text(text = "Opis", style = MaterialTheme.typography.titleMedium)
                         Text(
-                            //opcjonalnie: Jeśli masz opis w UI modelu, użyj go, jeśli nie - placeholder
                             text = "Szczegółowy opis ogłoszenia...",
                             style = MaterialTheme.typography.bodyMedium
                         )

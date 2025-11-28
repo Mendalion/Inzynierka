@@ -1,4 +1,4 @@
-package com.example.inzynierkaallegroolx.ui.screens.components
+package com.example.inzynierkaallegroolx.ui.components
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer

@@ -16,9 +16,8 @@ import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
 import java.io.FileOutputStream
 
-// Reprezentacja zdjęcia (może być z serwera lub lokalne nowe)
 data class ImageUi(
-    val id: String? = null, // null dla nowych
+    val id: String? = null,
     val remoteUrl: String? = null,
     val localUri: Uri? = null
 )
@@ -29,7 +28,7 @@ data class ListingEditState(
     val description: String = "",
     val price: String = "",
     val category: String = "",
-    val images: List<ImageUi> = emptyList(), // Lista zdjęć
+    val images: List<ImageUi> = emptyList(),
     val isLoading: Boolean = true,
     val isSuccess: Boolean = false,
     val error: String? = null
@@ -43,9 +42,6 @@ class ListingEditViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             try {
                 val listing = ApiClient.listings.get(id)
-                // Mapowanie zdjęć z serwera (URL)
-                // Zakładamy, że serwer zwraca pełne URL w polu 'url', jeśli nie - trzeba dodać Config.BASE_URL
-                // W image.controller.ts jest '/uploads/filename'. Trzeba dodać base url.
 
                 val mappedImages = listing.images?.map { imgDto ->
                     val fullUrl = Config.imageUrl(imgDto.url)
@@ -77,25 +73,18 @@ class ListingEditViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    fun addPhotoMock() {}
-    fun removePhotoMock() {}
-
     fun addPhotos(uris: List<Uri>) {
         val current = _state.value.images.toMutableList()
-        // Dodajemy nowe lokalne zdjęcia
+        //dodajemy nowe lokalne zdjęcia
         uris.forEach { current.add(ImageUi(localUri = it)) }
         _state.value = _state.value.copy(images = current)
     }
 
-    // Usunięcie zdjęcia (jeśli lokalne - usuń z listy, jeśli remote - można by wołać API delete, ale na razie usuńmy z widoku)
     fun removePhoto(img: ImageUi) {
         val current = _state.value.images.toMutableList()
         current.remove(img)
         _state.value = _state.value.copy(images = current)
 
-        // opcjonalnie: Jeśli to zdjęcie remote (ma ID), można od razu usunąć z serwera,
-        // albo dodać do listy "toDelete" i usunąć przy Save.
-        // tutaj dla uproszczenia tylko usuwam z widoku (nie usunie się fizycznie z serwera, chyba że dodasz logikę API).
     }
 
     fun saveChanges() {

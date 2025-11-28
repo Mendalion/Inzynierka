@@ -1,4 +1,4 @@
-package com.example.inzynierkaallegroolx.ui.screens.components
+package com.example.inzynierkaallegroolx.ui.components
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize

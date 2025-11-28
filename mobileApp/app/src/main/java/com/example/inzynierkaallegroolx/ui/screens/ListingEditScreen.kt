@@ -33,7 +33,7 @@ fun ListingEditScreen(
 ) {
     val state by vm.state.collectAsState()
 
-    // Launcher do wyboru zdjęć z galerii
+    //Launcher do wyboru zdjęć z galerii
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris -> vm.addPhotos(uris) }
@@ -94,19 +94,16 @@ fun ListingEditScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                // Sekcja edycji zdjęć (Prawdziwe zdjęcia + Coil)
                 Text("Edytuj zdjęcia", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
 
-                // Zmieniono na FlowRow lub poziomy scroll, tutaj prosty Row z zawijaniem jeśli zdjęć mało
-                // Dla lepszej obsługi wielu zdjęć warto użyć LazyRow, ale tu zostawiam Row zgodnie ze stylem
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp), // Stała wysokość kontenera na zdjęcia
+                        .height(100.dp), // stała wysokość kontenera na zdjęcia
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Przycisk dodawania
+                    // przycisk dodawania
                     Box(
                         modifier = Modifier
                             .size(80.dp)
@@ -121,13 +118,13 @@ fun ListingEditScreen(
                         Icon(Icons.Default.Add, contentDescription = "Dodaj")
                     }
 
-                    // Wyświetlanie listy zdjęć (z servera lub lokalnych)
+                    //Wyświetlanie listy zdjęć z servera lub lokalnych
                     state.images.forEach { img ->
                         Box(
                             modifier = Modifier.size(80.dp)
                         ) {
                             AsyncImage(
-                                model = img.localUri ?: img.remoteUrl, // Wybierz dostępne źródło
+                                model = img.localUri ?: img.remoteUrl, //wybranie zródła
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxSize()
@@ -135,7 +132,7 @@ fun ListingEditScreen(
                                 contentScale = ContentScale.Crop
                             )
 
-                            // Przycisk usuwania (X)
+                            //przycisk usuwania
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Usuń",
@@ -165,7 +162,6 @@ fun ListingEditScreen(
                     Text("Zapisz zmiany")
                 }
 
-                // Dodatkowy odstęp na dole
                 Spacer(modifier = Modifier.height(32.dp))
             }
         }

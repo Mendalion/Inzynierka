@@ -23,6 +23,7 @@ import com.example.inzynierkaallegroolx.ui.screens.LoginScreen
 //import com.example.inzynierkaallegroolx.ui.screens.ConversationDetailScreen
 import com.example.inzynierkaallegroolx.ui.screens.HomeScreen
 import com.example.inzynierkaallegroolx.ui.screens.ListingEditScreen
+import com.example.inzynierkaallegroolx.ui.screens.MessagesScreen
 //import com.example.inzynierkaallegroolx.ui.screens.TemplatesScreen
 import com.example.inzynierkaallegroolx.ui.screens.ProfileScreen
 import com.example.inzynierkaallegroolx.ui.screens.StatsScreen
@@ -45,13 +46,13 @@ object Routes {
 fun AppNavigation(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = viewModel(),
-    startDestination: String = Screen.Login.route // Domyślnie logowanie
+    startDestination: String = Screen.Login.route
 ) {
     NavHost(navController = navController, startDestination = startDestination) {
 
         composable(Screen.Login.route) {
             LoginScreen(onLoggedIn = {
-                // Po zalogowaniu idziemy do Home i czyścimy historię, żeby nie cofnąć do logowania
+                // Po zalogowaniu idziemy do Home i czyścimy historię żeby nie cofnąć do logowania
                 navController.navigate(Screen.Home.route) {
                     popUpTo(Screen.Login.route) { inclusive = true }
                 }
@@ -78,7 +79,12 @@ fun AppNavigation(
             ListingsScreen(navController)
         }
         composable(Screen.Messages.route) {
-            Text("Wiadomości - TODO")
+            MessagesScreen(
+                navController = navController,
+                //nawigacja do konkretnych rozmów
+                onNavigateToDetail = { conversationId -> navController.navigate("conversation/$conversationId")
+                }
+            )
         }
 
         composable(Screen.Stats.route) {
@@ -98,25 +104,3 @@ fun AppNavigation(
         }
     }
 }
-
-//@Composable
-//fun AppNavHost() {
-//    val nav = rememberNavController()
-//    NavHost(navController = nav, startDestination = Routes.LOGIN) {
-//        composable(Routes.LOGIN) { LoginScreen(onLoggedIn = { nav.navigate(Routes.LISTINGS) { popUpTo(Routes.LOGIN) { inclusive = true } } }) }
-//        composable(Routes.LISTINGS) { ListingsScreen() }
-//        composable(Routes.LISTING_EDIT) { ListingEditScreen(onDone = { nav.popBackStack() }) }
-//        composable(Routes.MESSAGES) { MessagesScreen(onOpen = { nav.navigate(Routes.CONVERSATION + "/" + it) }) }
-//        composable(Routes.CONVERSATION + "/{id}") { backStack ->
-//            val id = backStack.arguments?.getString("id") ?: return@composable
-//            ConversationDetailScreen(id, onBack = { nav.popBackStack() })
-//        }
-//        composable(Routes.TEMPLATES) { TemplatesScreen() }
-//        composable(Routes.PROFILE) { ProfileScreen() }
-//        composable(Routes.REPORTS) { ReportsScreen() }
-//        composable(Routes.STATS + "/{id}") { backStack ->
-//            val id = backStack.arguments?.getString("id") ?: return@composable
-//            StatsScreen(listingId = id)
-//        }
-//    }
-//}

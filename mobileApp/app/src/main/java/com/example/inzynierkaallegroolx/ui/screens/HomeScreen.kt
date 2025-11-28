@@ -34,7 +34,7 @@ fun HomeScreen(navController: NavController, vm: HomeViewModel = viewModel()) {
             AppTopBar(
                 title = "Home",
                 navController = navController,
-                showAvatar = true // Tutaj decydujemy czy widać avatar
+                showAvatar = true
             )
         },
         bottomBar = { AppBottomBar(navController) }
@@ -45,7 +45,7 @@ fun HomeScreen(navController: NavController, vm: HomeViewModel = viewModel()) {
                 .fillMaxSize()
                 .padding(16.dp)
         ) {
-            // Sekcja Synchronizacja
+            //sekcja synchronizacji
             Text(
                 "Synchronizacja",
                 style = MaterialTheme.typography.titleMedium,
@@ -60,7 +60,7 @@ fun HomeScreen(navController: NavController, vm: HomeViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Główny Panel - Kafelki (Statystyki)
+            //kafelki czyli statystyki
             Text(
                 "Przegląd",
                 style = MaterialTheme.typography.titleMedium,
@@ -82,7 +82,7 @@ fun HomeScreen(navController: NavController, vm: HomeViewModel = viewModel()) {
 
             Spacer(modifier = Modifier.height(16.dp))
 
-            // Przyciski Akcji na dole
+            //przyciski akcji
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.spacedBy(12.dp)
@@ -111,7 +111,7 @@ fun HomeScreen(navController: NavController, vm: HomeViewModel = viewModel()) {
     }
 }
 
-// Komponent kafelka statusu synchronizacji
+//Komponent kafelka synch
 @Composable
 fun SyncStatusCard(name: String, isSynced: Boolean, modifier: Modifier = Modifier) {
     Card(
@@ -122,7 +122,7 @@ fun SyncStatusCard(name: String, isSynced: Boolean, modifier: Modifier = Modifie
             modifier = Modifier.padding(12.dp),
             verticalAlignment = Alignment.CenterVertically
         ) {
-            // Kropka statusu
+            //Kropka statusu
             Surface(
                 modifier = Modifier.size(10.dp),
                 shape = CircleShape,
@@ -134,7 +134,7 @@ fun SyncStatusCard(name: String, isSynced: Boolean, modifier: Modifier = Modifie
     }
 }
 
-//Komponent dużego kafelka statystyk
+//Komponent dużego kafelka
 @Composable
 fun HomeStatTile(label: String, value: String, bgColor: Color, contentColor: Color) {
     Card(
@@ -145,7 +145,7 @@ fun HomeStatTile(label: String, value: String, bgColor: Color, contentColor: Col
             modifier = Modifier
                 .padding(16.dp)
                 .fillMaxWidth()
-                .height(100.dp), // Stała wysokość dla równych kafelków
+                .height(100.dp),
             verticalArrangement = Arrangement.SpaceBetween
         ) {
             Text(

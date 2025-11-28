@@ -6,7 +6,6 @@ import com.example.inzynierkaallegroolx.data.listings.ListingEntity
 import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
 
 class ListingsLocalRepository(context: Context) {
-    // Upewnij się, że w AppDatabase masz metodę get lub getDatabase - użyj tej, która tam jest
     private val db = AppDatabase.getDatabase(context)
 
     suspend fun all(): List<ListingItemUi> = db.listingDao().getAll().map {

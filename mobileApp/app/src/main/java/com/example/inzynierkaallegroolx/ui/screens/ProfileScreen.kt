@@ -83,7 +83,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            //sekcja Edycji
+            //sekcja edycji
             Card(
                 modifier = Modifier.fillMaxWidth(),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
@@ -136,7 +136,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            //przycisk Ustawienia (TODO)
+            //przycisk ustawienia (TODO)
             OutlinedButton(
                 onClick = { /* TODO */ },
                 modifier = Modifier.fillMaxWidth().height(50.dp)
@@ -148,7 +148,7 @@ fun ProfileScreen(
 
             Spacer(modifier = Modifier.weight(1f)) //wypycha wylogowanie na dół
 
-            //przycisk Wyloguj
+            //przycisk wyloguj
             Button(
                 onClick = {
                     vm.logout()

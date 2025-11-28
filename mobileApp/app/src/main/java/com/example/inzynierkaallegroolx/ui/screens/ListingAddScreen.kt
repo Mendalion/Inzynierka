@@ -103,16 +103,16 @@ fun ListingAddScreen(
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // Sekcja Zdjęć
+            //sekcja zdjęć
             Text("Zdjęcia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Lista zdjęć (pozioma)
+            // lista zdjęc
             Row(
                 modifier = Modifier.fillMaxWidth().height(100.dp),
                 horizontalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                // Przycisk dodawania
+                //Przycisk dodawania
                 Box(
                     modifier = Modifier
                         .size(80.dp)

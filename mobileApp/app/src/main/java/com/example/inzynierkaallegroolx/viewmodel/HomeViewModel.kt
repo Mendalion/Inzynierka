@@ -19,7 +19,7 @@ data class HomeStats(
     val unreadMessages: Int = 0,
     val totalViews: Int = 0
 )
-//TODO logike xd
+//TODO logike
 class HomeViewModel(app: Application) : AndroidViewModel(app) {
     private val _stats = MutableStateFlow(
         HomeStats(
