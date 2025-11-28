@@ -15,7 +15,8 @@ class ListingsLocalRepository(context: Context) {
             title = it.title,
             price = it.price,
             status = it.status,
-            platform = "UNKNOWN"
+            platforms = emptyList(),
+            thumbnailUrl = null
         )
     }
 

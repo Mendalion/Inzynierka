@@ -27,3 +27,8 @@ docker-compose up
     npm run prisma:migrate
     npm run dev  
     npx tsx src/test_full.ts //testy
+
+    
+
+listingRepository zrobic by przerwalo gdyby nie siadło
+https://github.com/Mendalion/Inzynierka/tree/refactor-r

@@ -1,3 +1,5 @@
+// plik: mendalion/inzynierka/Inzynierka-refactor-r/mobileApp/app/src/main/java/com/example/inzynierkaallegroolx/ui/screens/ListingDetailScreen.kt
+
 package com.example.inzynierkaallegroolx.ui.screens
 
 import androidx.compose.foundation.layout.*
@@ -7,7 +9,6 @@ import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
@@ -25,7 +26,6 @@ fun ListingDetailScreen(
 ) {
     val state by viewModel.state.collectAsState()
 
-    //Obsługa usunięcia - cofnij do listy
     LaunchedEffect(state.isDeleted) {
         if (state.isDeleted) {
             navController.popBackStack()
@@ -42,13 +42,11 @@ fun ListingDetailScreen(
                     }
                 },
                 actions = {
-                    // Przycisk edycji
                     state.listing?.let { listing ->
                         IconButton(onClick = { navController.navigate("listing/edit/${listing.id}") }) {
                             Icon(Icons.Default.Edit, contentDescription = "Edytuj")
                         }
                     }
-                    // Przycisk usuwania
                     IconButton(onClick = { viewModel.deleteListing() }) {
                         Icon(Icons.Default.Delete, contentDescription = "Usuń", tint = Color.Red)
                     }
@@ -85,13 +83,16 @@ fun ListingDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(text = "Status: ${listing.status}")
-                                Text(text = "Platforma: ${listing.platform}")
+                                Text(text = "Platformy: ${listing.platforms.joinToString(", ")}")
                             }
                         }
 
                         Text(text = "Opis", style = MaterialTheme.typography.titleMedium)
-                        // Tutaj w przyszłości pełny opis pobierany z detali
-                        Text(text = "Brak szczegółowego opisu w widoku listy (dane przychodzą z mappera).", style = MaterialTheme.typography.bodyMedium)
+                        Text(
+                            //opcjonalnie: Jeśli masz opis w UI modelu, użyj go, jeśli nie - placeholder
+                            text = "Szczegółowy opis ogłoszenia...",
+                            style = MaterialTheme.typography.bodyMedium
+                        )
                     }
                 }
             }

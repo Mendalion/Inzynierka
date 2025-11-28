@@ -63,6 +63,8 @@ dependencies {
     implementation(libs.compose.material3)
     implementation(libs.compose.material.icons.extended)
     implementation(libs.compose.navigation)
+    implementation(libs.androidx.core.ktx)
+    implementation("io.coil-kt:coil-compose:2.5.0")
 
     implementation(libs.coroutines.core)
     implementation(libs.coroutines.android)

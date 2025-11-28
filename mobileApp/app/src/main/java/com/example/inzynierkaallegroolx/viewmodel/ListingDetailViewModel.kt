@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
+import com.example.inzynierkaallegroolx.Config
 import com.example.inzynierkaallegroolx.network.ApiClient
 import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -36,12 +37,17 @@ class ListingDetailViewModel(
             _state.value = _state.value.copy(isLoading = true, error = null)
             try {
                 val dto = ApiClient.listings.get(id)
+
+                val platformsList = dto.platformStates?.map { it.platform } ?: emptyList()
+                val thumb = Config.imageUrl(dto.images?.firstOrNull()?.url)
+
                 val uiModel = ListingItemUi(
                     id = dto.id,
                     title = dto.title,
                     price = dto.price ?: "0.00",
                     status = dto.status ?: "UNKNOWN",
-                    platform = dto.platform ?: "OTHER"
+                    platforms = platformsList,
+                    thumbnailUrl = thumb
                 )
                 _state.value = _state.value.copy(isLoading = false, listing = uiModel)
             } catch (e: Exception) {

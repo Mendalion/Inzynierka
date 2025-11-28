@@ -1,5 +1,9 @@
 package com.example.inzynierkaallegroolx.ui.screens
 
+import android.widget.Toast
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -10,17 +14,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AddAPhoto
 import androidx.compose.material.icons.filled.Check
+import androidx.compose.material.icons.filled.Close
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import coil.compose.AsyncImage
 import com.example.inzynierkaallegroolx.ui.components.AppTopBar
 import com.example.inzynierkaallegroolx.viewmodel.ListingAddViewModel
 
@@ -31,10 +39,17 @@ fun ListingAddScreen(
 ) {
     val state by vm.state.collectAsState()
     val scrollState = rememberScrollState()
+    val context = LocalContext.current
 
-    //Obsługa sukcesu - powrót do poprzedniego ekranu
+    //Launcher galerii
+    val photoPickerLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.PickMultipleVisualMedia(),
+        onResult = { uris -> vm.addPhotos(uris) }
+    )
+
     LaunchedEffect(state.isSuccess) {
         if (state.isSuccess) {
+            Toast.makeText(context, "Dodano ogłoszenie", Toast.LENGTH_SHORT).show()
             navController.popBackStack()
             vm.resetState()
         }
@@ -47,46 +62,10 @@ fun ListingAddScreen(
             modifier = Modifier
                 .padding(padding)
                 .fillMaxSize()
-                .verticalScroll(scrollState) //umożliwia przewijanie
+                .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
-
-            //sekcja Zdjęć (Placeholder)
-            Text("Zdjęcia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-            Spacer(modifier = Modifier.height(8.dp))
-
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                // Przycisk dodawania
-                Box(
-                    modifier = Modifier
-                        .size(80.dp)
-                        .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
-                        .clickable { vm.addPhotoMock() },
-                    contentAlignment = Alignment.Center
-                ) {
-                    Icon(Icons.Default.AddAPhoto, contentDescription = "Dodaj", tint = MaterialTheme.colorScheme.primary)
-                }
-
-                //wyświetlanie dodanych "zdjęć" (tylko liczniki/kwadraty dla testu)
-                repeat(state.photosCount) {
-                    Box(
-                        modifier = Modifier
-                            .size(80.dp)
-                            .background(Color.Gray.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Text("Img ${it + 1}", style = MaterialTheme.typography.bodySmall)
-                    }
-                }
-            }
-            Text("Dodano: ${state.photosCount} zdjęć", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
-
-            Spacer(modifier = Modifier.height(24.dp))
-
-            //pola Tekstowe
+            //pola tekstowe
             OutlinedTextField(
                 value = state.title,
                 onValueChange = { vm.onTitleChange(it) },
@@ -95,9 +74,7 @@ fun ListingAddScreen(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Next)
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             OutlinedTextField(
                 value = state.price,
                 onValueChange = { vm.onPriceChange(it) },
@@ -106,9 +83,7 @@ fun ListingAddScreen(
                 singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number, imeAction = ImeAction.Next)
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             OutlinedTextField(
                 value = state.category,
                 onValueChange = { vm.onCategoryChange(it) },
@@ -116,36 +91,94 @@ fun ListingAddScreen(
                 modifier = Modifier.fillMaxWidth(),
                 singleLine = true
             )
-
             Spacer(modifier = Modifier.height(12.dp))
-
             OutlinedTextField(
                 value = state.description,
                 onValueChange = { vm.onDescriptionChange(it) },
                 label = { Text("Opis przedmiotu") },
-                modifier = Modifier.fillMaxWidth().height(150.dp), // Wyższe pole
+                modifier = Modifier.fillMaxWidth().height(150.dp),
                 maxLines = 10,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Text)
             )
 
             Spacer(modifier = Modifier.height(24.dp))
 
-            // 3. Wybór Platformy
+            // Sekcja Zdjęć
+            Text("Zdjęcia", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+            Spacer(modifier = Modifier.height(8.dp))
+
+            // Lista zdjęć (pozioma)
+            Row(
+                modifier = Modifier.fillMaxWidth().height(100.dp),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                // Przycisk dodawania
+                Box(
+                    modifier = Modifier
+                        .size(80.dp)
+                        .background(Color.LightGray.copy(alpha = 0.3f), RoundedCornerShape(8.dp))
+                        .clickable {
+                            photoPickerLauncher.launch(
+                                PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)
+                            )
+                        },
+                    contentAlignment = Alignment.Center
+                ) {
+                    Icon(Icons.Default.AddAPhoto, contentDescription = "Dodaj", tint = MaterialTheme.colorScheme.primary)
+                }
+
+                //wyświetlanie wybranych zdjęć
+                state.selectedPhotos.forEach { uri ->
+                    Box(
+                        modifier = Modifier.size(80.dp)
+                    ) {
+                        AsyncImage(
+                            model = uri,
+                            contentDescription = null,
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .background(Color.Gray.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
+                            contentScale = ContentScale.Crop
+                        )
+                        //do usuwania
+                        Icon(
+                            imageVector = Icons.Default.Close,
+                            contentDescription = "Usuń",
+                            tint = Color.Red,
+                            modifier = Modifier
+                                .align(Alignment.TopEnd)
+                                .background(Color.White, RoundedCornerShape(50))
+                                .padding(2.dp)
+                                .size(16.dp)
+                                .clickable { vm.removePhoto(uri) }
+                        )
+                    }
+                }
+            }
+            Text("Wybrano: ${state.selectedPhotos.size} zdjęć", style = MaterialTheme.typography.bodySmall, color = Color.Gray)
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            //Checkboxy Platform
             Text("Opublikuj na:", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
             Card(
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
             ) {
-                Column {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(8.dp),
+                    horizontalArrangement = Arrangement.SpaceEvenly,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable { vm.toggleAllegro(!state.platformAllegro) },
+                        modifier = Modifier.clickable { vm.toggleAllegro(!state.platformAllegro) }.padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(checked = state.platformAllegro, onCheckedChange = { vm.toggleAllegro(it) })
                         Text("Allegro")
                     }
                     Row(
-                        modifier = Modifier.fillMaxWidth().clickable { vm.toggleOlx(!state.platformOlx) },
+                        modifier = Modifier.clickable { vm.toggleOlx(!state.platformOlx) }.padding(8.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Checkbox(checked = state.platformOlx, onCheckedChange = { vm.toggleOlx(it) })
@@ -154,7 +187,6 @@ fun ListingAddScreen(
                 }
             }
 
-            //obsługa Błędów
             if (state.error != null) {
                 Spacer(modifier = Modifier.height(8.dp))
                 Text(state.error!!, color = MaterialTheme.colorScheme.error)
@@ -162,7 +194,6 @@ fun ListingAddScreen(
 
             Spacer(modifier = Modifier.height(32.dp))
 
-            //przycisk Akcji
             Button(
                 onClick = { vm.submitListing() },
                 modifier = Modifier.fillMaxWidth().height(50.dp),
@@ -176,8 +207,6 @@ fun ListingAddScreen(
                     Text("Opublikuj ogłoszenie")
                 }
             }
-
-            //dodatkowy odstęp na dole, żeby klawiatura/pasek nawigacji nie zasłaniały
             Spacer(modifier = Modifier.height(32.dp))
         }
     }

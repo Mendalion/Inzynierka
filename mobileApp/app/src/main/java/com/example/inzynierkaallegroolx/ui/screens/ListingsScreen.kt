@@ -15,6 +15,9 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
 import com.example.inzynierkaallegroolx.network.ListingDto
@@ -23,12 +26,26 @@ import com.example.inzynierkaallegroolx.ui.components.AppTopBar
 import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
 import com.example.inzynierkaallegroolx.ui.navigation.Screen
 import com.example.inzynierkaallegroolx.viewmodel.ListingsViewModel
+import com.example.inzynierkaallegroolx.viewmodel.SortOption
 
 //import com.example.inzynierkaallegroolx.viewmodel.ListingsViewModel
 
 @Composable
 fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewModel()) {
     val state by vm.state.collectAsState()
+    val lifecycleOwner = LocalLifecycleOwner.current
+
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                vm.loadListings()
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
+    }
+
+    var sortMenuExpanded by remember { mutableStateOf(false) }
 
     Scaffold(
         topBar = { AppTopBar("Twoje Ogłoszenia", navController) },
@@ -52,23 +69,69 @@ fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewMod
 
             Spacer(modifier = Modifier.height(8.dp))
 
-            // Filtry (Chips)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                FilterChip(
-                    selected = state.filterPlatform == "ALL",
-                    onClick = { vm.onFilterChange("ALL") },
-                    label = { Text("Wszystkie") }
-                )
-                FilterChip(
-                    selected = state.filterPlatform == "ALLEGRO",
-                    onClick = { vm.onFilterChange("ALLEGRO") },
-                    label = { Text("Allegro") }
-                )
-                FilterChip(
-                    selected = state.filterPlatform == "OLX",
-                    onClick = { vm.onFilterChange("OLX") },
-                    label = { Text("OLX") }
-                )
+            // Filtry i Sortowanie
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                // Filtry (Chips)
+                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    FilterChip(
+                        selected = state.filterPlatform == "ALL",
+                        onClick = { vm.onFilterChange("ALL") },
+                        label = { Text("Wszystkie") }
+                    )
+                    FilterChip(
+                        selected = state.filterPlatform == "ALLEGRO",
+                        onClick = { vm.onFilterChange("ALLEGRO") },
+                        label = { Text("Allegro") }
+                    )
+                    FilterChip(
+                        selected = state.filterPlatform == "OLX",
+                        onClick = { vm.onFilterChange("OLX") },
+                        label = { Text("OLX") }
+                    )
+                }
+                // Przycisk Sortowania
+                Box {
+                    TextButton(onClick = { sortMenuExpanded = true }) {
+                        Text("Sortuj")
+                    }
+                    DropdownMenu(
+                        expanded = sortMenuExpanded,
+                        onDismissRequest = { sortMenuExpanded = false }
+                    ) {
+                        DropdownMenuItem(
+                            text = { Text("Nazwa (A-Z)") },
+                            onClick = {
+                                vm.onSortChange(SortOption.TITLE_ASC)
+                                sortMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Nazwa (Z-A)") },
+                            onClick = {
+                                vm.onSortChange(SortOption.TITLE_DESC)
+                                sortMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Cena rosnąco") },
+                            onClick = {
+                                vm.onSortChange(SortOption.PRICE_ASC)
+                                sortMenuExpanded = false
+                            }
+                        )
+                        DropdownMenuItem(
+                            text = { Text("Cena malejąco") },
+                            onClick = {
+                                vm.onSortChange(SortOption.PRICE_DESC)
+                                sortMenuExpanded = false
+                            }
+                        )
+                    }
+                }
             }
 
             Spacer(modifier = Modifier.height(16.dp))

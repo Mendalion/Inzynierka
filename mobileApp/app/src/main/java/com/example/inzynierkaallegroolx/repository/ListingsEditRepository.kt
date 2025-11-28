@@ -7,10 +7,10 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
 
 class ListingsEditRepository {
-    suspend fun create(title: String, description: String, price: Double, platform: String) = withContext(Dispatchers.IO) {
+    suspend fun create(title: String, description: String, price: Double) = withContext(Dispatchers.IO) {
         runCatching {
             ApiClient.listings.create(
-                ListingCreateBody(title, description, price, platform)
+                ListingCreateBody(title, description, price)
             )
         }
     }
