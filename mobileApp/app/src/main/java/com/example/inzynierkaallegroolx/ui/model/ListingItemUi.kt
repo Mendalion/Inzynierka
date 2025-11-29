@@ -6,5 +6,7 @@ data class ListingItemUi(
     val price: String,
     val status: String,
     val platforms: List<String>,
-    val thumbnailUrl: String? = null
+    val thumbnailUrl: String? = null,
+    val description: String = "",
+    val allImages: List<String?> = emptyList()
 )

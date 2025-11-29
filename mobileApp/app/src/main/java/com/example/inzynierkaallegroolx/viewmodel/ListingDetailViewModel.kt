@@ -32,6 +32,7 @@ class ListingDetailViewModel(
     }
 
     fun loadListing() {
+
         val id = listingId ?: return
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
@@ -39,7 +40,8 @@ class ListingDetailViewModel(
                 val dto = ApiClient.listings.get(id)
 
                 val platformsList = dto.platformStates?.map { it.platform } ?: emptyList()
-                val thumb = Config.imageUrl(dto.images?.firstOrNull()?.url)
+                val allImagesList = dto.images?.map { Config.imageUrl(it.url) } ?: emptyList()
+                val thumb = allImagesList.firstOrNull()
 
                 val uiModel = ListingItemUi(
                     id = dto.id,
@@ -47,7 +49,9 @@ class ListingDetailViewModel(
                     price = dto.price ?: "0.00",
                     status = dto.status ?: "UNKNOWN",
                     platforms = platformsList,
-                    thumbnailUrl = thumb
+                    thumbnailUrl = thumb,
+                    description = dto.description ?: "",
+                    allImages = allImagesList
                 )
                 _state.value = _state.value.copy(isLoading = false, listing = uiModel)
             } catch (e: Exception) {

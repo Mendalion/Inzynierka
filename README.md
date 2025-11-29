@@ -21,6 +21,8 @@ i w build.gradle.kts
 //    }
     compileSdk = 36
 
+git clone -b olxAllegro  https://github.com/Mendalion/Inzynierka 
+cd Inzynierka
 docker-compose up
 (cd) server
     //dodac plik .env na wzór .envexample
@@ -29,7 +31,7 @@ docker-compose up
     npm run dev  
     npx tsx src/test_full.ts //testy
 do mobileApp
-zmien ewntualnie w pliku local.properties sdk.dir=E\:\\androidStudioSDK
+zmien ewntualnie w pliku local.properties bo jest sdk.dir=E\:\\androidStudioSDK
 
     
 
