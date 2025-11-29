@@ -28,14 +28,14 @@ Desktop.ini
 #SERWER
 server/dist/
 server/coverage/
-#server/generated/
+server/generated/
 server/uploads/
 server/.prisma/
 
 
 #MOBILE
-#.gradle/
-#!gradle/wrapper/gradle-wrapper.jar
+.gradle/
+!gradle/wrapper/gradle-wrapper.jar
 
 #Konfiguracja lokalna
 **/local.properties
@@ -50,8 +50,8 @@ captures/
 google-services.json
 
 #Klucze podpisywania i paczki
-#*.jks
-#*.keystore
+*.jks
+*.keystore
 *.pepk
 *.apk
 *.aab

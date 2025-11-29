@@ -23,6 +23,7 @@ i w build.gradle.kts
 
 docker-compose up
 (cd) server
+    //dodac plik .env na wzór .envexample
     (jednorazowo)nmp install
     npm run prisma:migrate
     npm run dev  
