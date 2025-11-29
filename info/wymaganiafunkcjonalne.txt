@@ -1,0 +1,38 @@
+Wymagania funkcjonalne definiuje konkretne zachowania i usług
+świadczonych przez aplikację, które system musi realizować.
+F1. Zarządzanie ogłoszeniami
+F1.1 Import ogłoszeń
+F1.1.1 Pobieranie ogłoszeń z Allegro
+F1.1.2 Pobieranie ogłoszeń z OLX
+F1.1.3 Aktualizacja stanu ogłoszeń ("sprzedane"/"aktywne")
+F1.2 Edycja ogłoszeń
+F1.2.1 Modyfikacja tytułu, opisu, ceny
+F1.2.2 Dodawanie/edycja zdjęć
+F1.2.3 Zmiana kategorii ogłoszenia
+F1.3 Usuwanie/archiwizacja
+F1.3.1 Usuwanie ogłoszeń z platform zewnętrznych
+F1.3.2 Przeniesienie do archiwum
+F2. Komunikacja z klientami
+F2.1 Integracja z wiadomościami
+F2.1.1 Synchronizacja wiadomości z Allegro/OLX
+F2.1.2 Powiadomienia o nowych wiadomościach
+F2.2 Odpowiadanie na wiadomości
+F2.2.1 Wysyłanie odpowiedzi z poziomu aplikacji
+F2.2.2 Szablony wiadomości
+F3. Statystyki i raporty
+F3.1 Analiza sprzedaży
+F3.1.1 Liczba wyświetleń ogłoszeń
+F3.1.2 Liczba sprzedanych przedmiotów
+F3.2 Generowanie raportów
+F3.2.1 Raporty miesięczne/tygodniowe
+F3.2.2 Eksport do CSV/PDF
+F4. Bezpieczeństwo i synchronizacja
+F4.1 Uwierzytelnianie
+F4.1.1 Rejestrowanie
+F4.1.2 Logowanie(hasło/biometria)
+F4.2 Synchronizacja między platformami
+F4.2.1 Automatyczna aktualizacja stanu ogłoszeń
+F4.3 Szyfrowanie
+F5. Zarządzanie danymi klienta
+F5.1 Aktualizacja danych(adres, telefon, e mail)
+F5.2 Zmiana lub reset hasła

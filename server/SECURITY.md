@@ -1,0 +1,6 @@
+# Security & Compliance (Draft)
+// ...existing code...
+## Audit
+- Actions recorded: user profile update, listing CRUD, message replies, template creation, report creation.
+// ...existing code...
+

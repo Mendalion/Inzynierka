@@ -1,0 +1,106 @@
+package com.example.inzynierkaallegroolx.network
+
+import com.example.inzynierkaallegroolx.Config
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.kotlin.reflect.KotlinJsonAdapterFactory
+import okhttp3.Interceptor
+import okhttp3.OkHttpClient
+import okhttp3.logging.HttpLoggingInterceptor
+import retrofit2.Retrofit
+import retrofit2.converter.moshi.MoshiConverterFactory
+import retrofit2.http.GET
+import retrofit2.http.POST
+import retrofit2.http.Query
+import retrofit2.http.Body
+import retrofit2.http.Path
+import retrofit2.http.PATCH
+
+interface StatsApi {
+    @GET("stats/listings/views") suspend fun views(@Query("listingId") listingId: String): ViewsResponse
+    @GET("stats/listings/sales") suspend fun sales(@Query("listingId") listingId: String): SalesResponse
+    @POST("ingest/view") suspend fun ingestView(@Body body: IngestBody): Map<String, Any>
+    @POST("ingest/sale") suspend fun ingestSale(@Body body: IngestBody): Map<String, Any>
+}
+
+data class ViewsResponse(val listingId: String, val views: List<ViewPoint>)
+data class SalesResponse(val listingId: String, val sales: List<SalePoint>)
+data class ViewPoint(val id: String, val timestamp: String, val count: Int)
+data class SalePoint(val id: String, val timestamp: String, val count: Int)
+data class IngestBody(val listingId: String)
+
+interface ReportsApi {
+    @POST("reports") suspend fun create(@Body body: ReportCreateBody): ReportDto
+    @GET("reports/{id}/status") suspend fun status(@Path("id") id: String): ReportDto
+}
+
+data class ReportCreateBody(val type: String, val rangeStart: String, val rangeEnd: String)
+data class ReportDto(val id: String, val userId: String, val type: String, val status: String, val filePath: String?)
+
+interface UserApi {
+    @GET("user/me") suspend fun me(): UserMeDto
+    @PATCH("user/me") suspend fun update(@Body body: UserUpdateBody): Map<String, Any>
+    @GET("user/me/export") suspend fun export(): Map<String, Any>
+}
+
+data class UserMeDto(val id: String, val email: String, val name: String?, val phone: String?)
+data class UserUpdateBody(val name: String?, val phone: String?)
+
+
+
+object ApiClient {
+    private var tokenProvider: (() -> String?)? = null
+
+    fun setTokenProvider(provider: () -> String?) { tokenProvider = provider }
+
+    private val moshi = Moshi.Builder()
+        .add(KotlinJsonAdapterFactory())
+        .build()
+
+    private val logging = HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
+
+    // Client that attaches Authorization header when available
+    private val authedClient = OkHttpClient.Builder()
+        .addInterceptor(logging)
+        .addInterceptor(Interceptor { chain ->
+            val req = chain.request()
+            val access = tokenProvider?.invoke()
+            val newReq = if (access != null) req.newBuilder().addHeader("Authorization", "Bearer $access").build() else req
+            chain.proceed(newReq)
+        })
+        .build()
+
+    // Client without Authorization header (for login/register/refresh/biometric)
+    private val publicClient = OkHttpClient.Builder()
+        .addInterceptor(logging)
+        .build()
+
+    private val retrofitAuthed = Retrofit.Builder()
+        .baseUrl(Config.BASE_URL)
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .client(authedClient)
+        .build()
+
+    private val retrofitPublic = Retrofit.Builder()
+        .baseUrl(Config.BASE_URL)
+        .addConverterFactory(MoshiConverterFactory.create(moshi))
+        .client(publicClient)
+        .build()
+
+    // Use public client for AuthApi to avoid sending stale/invalid tokens
+    val auth: AuthApi = retrofitPublic.create(AuthApi::class.java)
+
+    val listings: ListingsApi = retrofitAuthed.create(ListingsApi::class.java)
+    val messages: MessagesApi = retrofitAuthed.create(MessagesApi::class.java)
+    val stats: StatsApi = retrofitAuthed.create(StatsApi::class.java)
+    val reports: ReportsApi = retrofitAuthed.create(ReportsApi::class.java)
+    val user: UserApi = retrofitAuthed.create(UserApi::class.java)
+
+    fun downloadReportFile(id: String): ByteArray? {
+        val url = "http://10.0.2.2:4000/reports/$id/download"
+        return try {
+            val req = okhttp3.Request.Builder().url(url).get().build()
+            val resp = authedClient.newCall(req).execute()
+            if (resp.isSuccessful) resp.body?.bytes() else null
+        } catch (_: Exception) { null }
+    }
+}

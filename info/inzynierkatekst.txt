@@ -1,0 +1,298 @@
+Praca dyplomowa
+inżynierska
+na kierunku Informatyka
+w specjalności Inżyniera oprogramowania
+Platforma do zarządzania sprzedażą przez portale aukcyjne
+Platform for managing sales through auction portals
+
+Wstęp
+Na przestrzeni ostatniej dekady za sprawą rozwoju technologii informacyjnych
+handel detaliczny przeniósł się na platformy aukcyjne i stały się fundamentem
+współczesnej dystrybucji. Dynamika rynku sprawia że jednoczesne zarzadzanie
+wieloma ofertami na różnych platformach generuje znaczne wyzwania operacyjne.
+Większość sprzedawców nie mają odpowiedniego zakresu czasu na
+aktualizowanie stanów ogłoszeń, obsługę komunikacji z klientami. Rozwiązaniem
+na ten problem jest system informatyczny, który pozwoli realizować wymagające
+czynności podczas sprzedaży. Projekt łączy w sobie funkcjonalności
+zarządzaniem ogłoszeniami, analitykę sprzedaży oraz integralność z API
+popularnych serwisów aukcyjnych.
+Cel i zakres pracy
+Głównym celem pracy było zaprojektowanie i implementacja mobilnej
+platformy usprawniającej zarządzanie sprzedażą na portalach aukcyjnych poprzez
+automatyzację kluczowych procesów. Szczegółowe cele obejmowały:
+• Stworzenie systemu synchronizującego ofert między Allegro/OLX a aplikacją w
+czasie rzeczywistym.
+• Implementację modułu komunikacji z klientami w tym powiadomienia
+• Opracowanie mechanizmów analitycznych takich jak śledzenie wyświetleń czy
+generowanie raportów.
+• Zapewnienie bezpieczeństwa danych.
+Zakres prac:
+• Opracowanie aplikacji mobilnej z czytelnym i wygodnym do długotrałej pracy
+interfejsem
+• Projekt bazy danych
+• Stworzenie architektury backendu
+• Implementacji integracji z API stron trzecich
+• Testy wydajnościowe i bezpieczeństwa
+
+
+
+Opis aplikacji
+Aplikacja do zarządzania sprzedażą przez portale aukcyjne i ogłoszeniowe to
+narzędzie umożliwiające sprzedawcom efektywne zarządzanie ofertami na
+platformach takich jak Allegro i OLX. Użytkownicy mogą automatycznie
+importować ogłoszenia, edytować ich treść, dodawać zdjęcia, zmieniać kategorie
+oraz aktualizować status sprzedaży.
+Dodatkowo aplikacja pozwala na archiwizację lub usuwanie ofert z platform
+zewnętrznych. Wbudowana funkcja synchronizacji wiadomości umożliwi integrację
+komunikacji z klientami, dzięki czemu sprzedawcy otrzymają powiadomienia o
+nowych wiadomościach i będą mogli szybko na nie odpowiadać.
+System oferuje także moduł analityczny, który pozwala na śledzenie liczby
+wyświetleń ogłoszeń oraz sprzedanych przedmiotów, a także generowanie
+raportów z wybranego okresu czasowego w formatach CSV lub PDF. Aplikacja
+dba o bezpieczeństwo użytkowników, zapewniając uwierzytelnianie za pomocą
+hasła lub biometrii, a także chroniąc dane użytkowników.
+System automatycznie synchronizuje stan ogłoszeń między platformami,
+eliminując konieczność ręcznego wprowadzania zmian.
+Zaprojektowana z myślą o wysokiej wydajności z maksymalnym opóźnieniem
+operacji do trzech sekund. Dodatkowo wspiera kompatybilność z urządzeniami
+mobilnymi, wymagając minimalnej wersji Android 10, oraz oferuje pełną zgodność
+z API platform zewnętrznych. Dzięki temu aplikacja znacząco usprawnia proces
+zarządzania sprzedażą, automatyzuje kluczowe operacje i pozwali sprzedawcom
+na oszczędność czasu oraz zwiększenie efektywności ich działalności.
+Wymagania funkcjonalne
+Wymagania funkcjonalne definiuje konkretne zachowania i usług
+świadczonych przez aplikację, które system musi realizować.
+F1. Zarządzanie ogłoszeniami
+F1.1 Import ogłoszeń
+F1.1.1 Pobieranie ogłoszeń z Allegro
+F1.1.2 Pobieranie ogłoszeń z OLX
+F1.1.3 Aktualizacja stanu ogłoszeń ("sprzedane"/"aktywne")
+F1.2 Edycja ogłoszeń
+F1.2.1 Modyfikacja tytułu, opisu, ceny
+F1.2.2 Dodawanie/edycja zdjęć
+F1.2.3 Zmiana kategorii ogłoszenia
+F1.3 Usuwanie/archiwizacja
+F1.3.1 Usuwanie ogłoszeń z platform zewnętrznych
+F1.3.2 Przeniesienie do archiwum
+F2. Komunikacja z klientami
+F2.1 Integracja z wiadomościami
+F2.1.1 Synchronizacja wiadomości z Allegro/OLX
+F2.1.2 Powiadomienia o nowych wiadomościach
+F2.2 Odpowiadanie na wiadomości
+F2.2.1 Wysyłanie odpowiedzi z poziomu aplikacji
+F2.2.2 Szablony wiadomości
+F3. Statystyki i raporty
+F3.1 Analiza sprzedaży
+F3.1.1 Liczba wyświetleń ogłoszeń
+F3.1.2 Liczba sprzedanych przedmiotów
+F3.2 Generowanie raportów
+F3.2.1 Raporty miesięczne/tygodniowe
+F3.2.2 Eksport do CSV/PDF
+F4. Bezpieczeństwo i synchronizacja
+F4.1 Uwierzytelnianie
+F4.1.1 Rejestrowanie
+F4.1.2 Logowanie(hasło/biometria)
+F4.2 Synchronizacja między platformami
+F4.2.1 Automatyczna aktualizacja stanu ogłoszeń
+F4.3 Szyfrowanie
+F5. Zarządzanie danymi klienta
+F5.1 Aktualizacja danych(adres, telefon, e mail)
+F5.2 Zmiana lub reset hasła
+Wymagania niefunkcjonalne
+Wymagania niefunkcjonalne to specyfikacje, które określają ograniczenia i
+standardy działania rozwiązań technologicznego. Obejmują aspektów
+wydajnościowych, bezpieczeństwa i dostępności.
+Tabela 3 wymagań niefuncjonalnych
+Cecha Miary
+Wydajność Opóźnienie ≤ 3 sekunda od operacji użytkownika(np. edycji
+ogłoszenia).
+Niezawodność System musi być dostępny dla użytkowników przez 99% czasu
+działania
+Bezpieczeństwo Ochrona danych użytkowników zgodnie z RODO
+Kompatybilność Obsługa systemów mobilnych z minimalną wersją Android 10(API 29)
+Integracja Pełna zgodność z standardami API platform zewnętrznych
+Przypadki użycia
+Wymagania funcjonalne reprezentują wybraną specyfikację możliwości
+systemu, definiując zachowania i usługi świadczone przez aplikację.
+Rysunek 1 Diagram przypadków użycia systemu zarzadzania ogłoszeniami
+Pobieranie ogłoszeń z Allegro:
+Aktorzy:
+Użytkownik, System Allegro
+Warunki początkowe:
+Użytkownik ma aktywne konto powiązane z Allegro
+Połączenie internetowe jest włączone
+Warunki końcowe:
+Użytkownik pomyślnie zaimportował wybrane ogłoszenia do aplikacji.
+Przebieg główny:
+1. Użytkownik wybiera opcję “Import ogłoszeń”.
+2. System wyświetla dostępne platformy (Allegro, OLX).
+3. Użytkownik wybiera “Allegro” i potwierdza.
+4. System łączy się z kontem Allegro użytkownika.
+5. System pobiera listę aktywnych ogłoszeń.
+6. System wyświetla podgląd ogłoszeń gotowych do zaimportowania.
+7. Użytkownik wybiera ogłoszenia i zatwierdza wybór.
+8. System importuje wybrane ogłoszenia do aplikacji.
+Alternatywa: Wymagane ponowne logowanie
+4a. System wykrywa, że wymagane jest ponowne uwierzytelnienie. System
+przekierowuje użytkownika do strony logowania Allegro. Po pomyślnym
+zalogowaniu kontynuuje proces importu od kroku 5.
+Alternatywa: Brak aktywnych ogłoszeń
+5a. System wykrywa brak aktywnych ogłoszeń na koncie. Wyświetla
+komunikat: "Nie znaleziono aktywnych ogłoszeń na Twoim koncie Allegro".
+Rysunek 2 Diagram przypadków użycia dla komunikacji z klientem
+Powiadomienia o nowych wiadomościach:
+Aktorzy:
+Użytkownik, System Allegro, System Olx
+Warunki początkowe:
+Użytkownik ma aktywne konto połączone z Olx/Allegro
+Aplikacja ma uprawnienia do odbierania i wysyłania powiadomień
+Warunki końcowe:
+Użytkownik otrzymał powiadomienie push (jeżeli nie wyłączył tej opcji)
+Wiadomość widnieje jako nieprzeczytana w aplikacji
+Przebieg główny:
+1. System cyklicznie synchronizuje wiadomości z Allegro/Olx
+2. System wykrywa nową wiadomość na powiązanym koncie
+(Allegro/OLX).
+3. System zapisuje wiadomość w bazie danych
+4. System wysyła powiadomienie push na urządzenie użytkownika.
+5. System wyświetla podgląd wiadomości w aplikacji.
+6. System oznacza wiadomość jako nieprzeczytaną.
+Alternatywa:
+4a. Użytkownik wyłączył powiadomienia, system zapisuje wiadomość, ale
+nie wysyła powiadomienia. Przy następnym otwarciu aplikacji pokazuje liczbę
+nieprzeczytanych wiadomości.
+Rysunek 3 Diagram przypadków użycia dla statystyk i raportów
+Liczba wyświetleń ogłoszeń:
+Aktorzy:
+Użytkownik
+Warunki początkowe:
+Użytkownik jest zalogowany
+Ogłoszenie było wcześniej opublikowane i mają zebrane dane
+Warunki końcowe:
+Użytkownikowi został wyświetlony wykres
+Przebieg Główny
+1. Użytkownik wybiera "Statystyki" -> "Wyświetlenia".
+2. System synchronizuje dane z platform trzecich.
+3. System wyświetla wykres z liczbą wyświetleń w czasie.
+4. System wyświetla opcje filtrowania po:
+a. Okresie(dzień/tydzień/miesiąc)
+b. Konkretnym ogłoszeniu
+5. Użytkownik wybiera opcję filtrowania i podaje parametr.
+6. System filtruje dane i ponownie wyświetla wykres.
+Alternatywa: Brak danych
+2a. System nie wykrywa statystyk do wyświetlenia
+2b. System wyświetla komunikat: "Nie masz jeszcze danych
+statystycznych. Sprawdź później."
+2c. Użytkownik zamyka komunikat
+.
+Rysunek 4 Diagram przypadków użycia dla logowania użytkownika
+Logowanie (hasło/biometria):
+Aktorzy:
+Niezalogowany użytkownik.
+Warunki początkowe:
+Użytkownik aktywował biometrię w aplikacji (jeśli dostępna).
+Warunki końcowe:
+Użytkownik poprawnie zalogował się do aplikacji
+Przebieg główny:
+1. Użytkownik otwiera aplikację.
+2. System wykrywa obsługę biometrii na urządzeniu i czy włączona jest
+opcja logowania biometrią.
+3. System prosi o zeskanowanie odcisku palca.
+4. Użytkownik przykłada palec do czujnika.
+5. System po pomyślnej weryfikacji loguje użytkownika.
+Alternatywa: Brak lub wyłączona biometria
+2a. System pomija krok biometrii i wyświetla formularz logowania
+2b. Użytkownik wprowadza dane oraz klika “Zaloguj się”
+Alternatywa: Nieudana weryfikacja biometryczna
+4a. Po 3 nieudanych próbach system wyświetla formularz o wprowadzenie
+hasła.
+4b. Użytkownik wprowadza hasło.
+Reset hasła:
+Aktorzy:
+Niezalogowany użytkownik
+Warunek początkowy:
+Użytkownik wchodzi na aplikację i podejmuje próbę logowania.
+Użytkownik nie pamięta hasła.
+Warunek końcowy:
+System rejestruje zmienione hasło.
+Użytkownik może się zalogować nowym hasłem.
+Przebieg główny:
+1. Użytkownik klika opcję "Nie pamiętam hasła".
+2. System wyświetla pole do podania adresu e-mail.
+3. Użytkownik wprowadza swój adres e-mail.
+4. System wysyła link resetujący na podany e-mail.
+5. Użytkownik klika link i przechodzi do formularza zmiany hasła
+6. Użytkownik wprowadza nowe hasło i zatwierdza.
+7. System potwierdza zmianę i prosi o zalogowanie.
+8.
+Alternatywa:
+5a. Nieprawidłowy link, link wygasł lub jest nieaktualny. System wyświetla
+komunikat: "Link wygasł.", i wyświetla opcję generacji nowego linku.
+5b. Użytkownik klika opcję generacji nowego linku. Następuje powrót do kroku
+4. scenariusza głównego.
+Diagram klas
+Diagram klas prezentuje strukturę systemu, który definiuje relacje między
+kluczowymi elementami. Stworzono na podstawie postawionych wymagań
+funkcjonalnych przedstawia potrzebne encji wraz z atrybutami oraz metodami.
+Model ten ukazuje fundamentalne wdrożenia systemu, zapewniając spójność
+danych i klarowność relacji między komponentami aplikacji.
+Diagram 1 diagram klas
+Diagram ERD
+Diagram relacji encji ilustruje strukturę modelu danych, definiując tym sposobem relacje między tabelami oraz kluczowe
+zależności.
+Diagram 2 diagram ERD
+Projekt interfejsu
+Doświadczenia użytkownika(UX) i warstwa wizualna (UI) są kluczowymi
+elementami całego projektu. Podstawowe funkcje aplikacji są przedstawione na
+ekranach koncepcyjnych poniżej.
+Panel główny przedstawiony na screen 4 stanowi centralny punkt nawigacji
+aplikacji, zorganizowany z siatką kafelków przedstawiający szczątkowe informacje
+oraz prowadzących do innych widoków aplikacji. Przedstawia również stan
+synchronizacji z zewnętrznymi API stron trzecich.
+Ekran z listą ogłoszeń zscreen 5 prezentuje zbiór ofert z możliwością
+wyszukiwania konkretnych ofert oraz zastosowania filtrów. Elementy z listy
+przedstawiają podstawowe informacje,oraz dają możliwość modyfikacji/usunięcia.
+Screen 4 Przykładowy wygląd panelu głównego
+aplikacji
+Screen 5 Przykładowy wygląd z listą ogłoszeń
+Ekran z komunikacją został przedstawiony na screenie 6. Pierwszy sekcja
+pozwala na szybki pogląd na konwersacje ustawionych od
+najnowszych(nieprzeczytanych). Druga sekcja jest dedykowana bezpośrednio do
+wymiany wiadomości z konkretnym użytkownikiem. Umożliwia wysyłania
+wiadomości tekstowych, a także korzystania z szablonów odpowiedzi. System
+powiadomień w czasie rzeczywistym zapewnia natychmiastowe informacje o
+nowych wiadomościach.
+Screen 6 Projekt komunikacji z klientami
+Panel statystyk dostarcza użytkownikowi kompleksowych danych
+analitycznych dotyczących sprzedaży, prezentowanych w formie graficznej, takiej
+jak wykresy miesięczne, zestawienia kategorii. Użytkownik ma możliwość
+generowania raportów w formatach CSV lub PDF, z opcją wyboru zakresu dat.
+Dane są wizualizowane w sposób czytelny, z zastosowaniem odpowiednich skal i
+oznaczeń, ułatwiających interpretację trendów i wyników.
+Screen 7 Projekt widoku ze statystykami
+Proces dodawania nowego ogłoszenia został zaprojektowany jako formularz,
+obejmujący takie pola jak tytuł, opis, kategoria, cena, miejsce do dodania zdjęć.
+Użytkownik ma również możliwość wyboru platformy, na której ogłoszenie ma
+zostać opublikowane. System automatycznie waliduje wprowadzane dane,
+zapewniając ich poprawność przed finalizacją procesu.
+Screen 8 Koncepcyjny wygląd widoku dodawania ogłoszenia
+Ekran profilu prezentuje szczegółowe informacje o statusie synchronizacji z
+zewnętrznymi platformami, wraz z datą ostatniej aktualizacji. Użytkownik ma
+możliwość edycji swoich danych poprzez wciśnięcie przycisku „edytuj profil”, a
+także przejścia do ustawień aplikacji, gdzie może dostosować preferencje
+dotyczące powiadomień, prywatności czy integracji z innymi serwisami. Przycisk
+wylogowania umożliwia bezpieczne zakończenie sesji, z zachowaniem wszystkich
+danych do momentu ponownego zalogowania.
+Screen 9 Wygląd koncepcyjny profilu użytkownika
+Technologie
+Tabela 4 Wybrane technologie
+Warstwa Technologia
+UI Kotlin + Jetpack Compose
+Zarządzanie stanem ViewModel + StateFlow
+Komunikacja z API Retroifit + Moshi
+Baza lokalna Room
+Notyfikacje Firebase Cloud Messaging
+Backend Node.js + Express
+Baza danych PostgreSQL
+Uwierzytelnianie JWT + EncryptedSharedPreferences
+Synchronizacja WorkManager + OAuth2
