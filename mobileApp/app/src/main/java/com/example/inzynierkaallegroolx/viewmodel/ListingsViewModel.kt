@@ -4,6 +4,7 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.inzynierkaallegroolx.network.ApiClient
+import com.example.inzynierkaallegroolx.repository.ListingsRepository
 import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -25,6 +26,7 @@ data class ListingsState(
 
 class ListingsViewModel(app: Application) : AndroidViewModel(app) {
 
+    private val repository = ListingsRepository(app)
     private val _state = MutableStateFlow(ListingsState())
     val state = _state.asStateFlow()
 
@@ -35,31 +37,13 @@ class ListingsViewModel(app: Application) : AndroidViewModel(app) {
     fun loadListings() {
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
-            try {
-                val resultDto = ApiClient.listings.getListings()
 
-                //mapowanie obsługa nulli za pomocą operatora ?:
-                val resultUi = resultDto.map { dto ->
-                    val platformsList = dto.platformStates?.map { ps -> ps.platform } ?: emptyList()
-                    val thumb = dto.images?.firstOrNull()?.url
+            val result = repository.fetchAll()
 
-                    ListingItemUi(
-                        id = dto.id,
-                        title = dto.title,
-                        price = dto.price ?: "0.00",
-                        status = dto.status ?: "UNKNOWN",
-                        platforms = platformsList,
-                        thumbnailUrl = thumb
-                    )
-                }
-
-                _state.value = _state.value.copy(
-                    isLoading = false,
-                    listings = resultUi,
-                )
-
-                applyFilters(resultUi)
-            } catch (e: Exception) {
+            result.onSuccess { list ->
+                _state.value = _state.value.copy(isLoading = false, listings = list)
+                applyFilters(list)
+            }.onFailure { e ->
                 _state.value = _state.value.copy(isLoading = false, error = "Błąd: ${e.message}")
             }
         }
@@ -82,8 +66,6 @@ class ListingsViewModel(app: Application) : AndroidViewModel(app) {
 
     private fun applyFilters(currentListings: List<ListingItemUi>) {
         val s = _state.value
-
-        //filtrowanie
         val filtered = currentListings.filter { listing ->
             val matchesSearch = listing.title.contains(s.searchQuery, ignoreCase = true)
             val matchesPlatform = when (s.filterPlatform) {
@@ -93,23 +75,20 @@ class ListingsViewModel(app: Application) : AndroidViewModel(app) {
             }
             matchesSearch && matchesPlatform
         }
-
-        //sortowanie
         val sorted = when (s.sortOption) {
             SortOption.TITLE_ASC -> filtered.sortedBy { it.title.lowercase() }
             SortOption.TITLE_DESC -> filtered.sortedByDescending { it.title.lowercase() }
             SortOption.PRICE_ASC -> filtered.sortedBy { it.price.toDoubleOrNull() ?: 0.0 }
             SortOption.PRICE_DESC -> filtered.sortedByDescending { it.price.toDoubleOrNull() ?: 0.0 }
         }
-
         _state.value = s.copy(filteredListings = sorted)
     }
 
     fun deleteListing(id: String) {
         viewModelScope.launch {
+            _state.value = _state.value.copy(isLoading = true)
             try {
-                _state.value = _state.value.copy(isLoading = true)
-                ApiClient.listings.delete(id)
+                repository.delete(id)
                 loadListings()
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = "Nie udało się usunąć")

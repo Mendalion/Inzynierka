@@ -1,5 +1,10 @@
 package com.example.inzynierkaallegroolx.ui.model
 
+data class ListingImageUi(
+    val id: String,
+    val url: String
+)
+
 data class ListingItemUi(
     val id: String,
     val title: String,
@@ -8,5 +13,5 @@ data class ListingItemUi(
     val platforms: List<String>,
     val thumbnailUrl: String? = null,
     val description: String = "",
-    val allImages: List<String?> = emptyList()
+    val allImages: List<ListingImageUi> = emptyList()
 )

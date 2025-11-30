@@ -6,8 +6,9 @@ import androidx.work.WorkerParameters
 import com.example.inzynierkaallegroolx.repository.ListingsRepository
 
 class ListingsSyncWorker(ctx: Context, params: WorkerParameters): CoroutineWorker(ctx, params) {
-    private val repo = ListingsRepository()
+    private val repo = ListingsRepository(ctx)
+
     override suspend fun doWork(): Result {
-        return if (repo.fetch().isSuccess) Result.success() else Result.retry()
+        return if (repo.fetchAll().isSuccess) Result.success() else Result.retry()
     }
 }

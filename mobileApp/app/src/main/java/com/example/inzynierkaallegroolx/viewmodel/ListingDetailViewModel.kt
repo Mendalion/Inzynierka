@@ -6,6 +6,7 @@ import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import com.example.inzynierkaallegroolx.Config
 import com.example.inzynierkaallegroolx.network.ApiClient
+import com.example.inzynierkaallegroolx.repository.ListingsRepository
 import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -23,6 +24,7 @@ class ListingDetailViewModel(
     savedStateHandle: SavedStateHandle
 ) : AndroidViewModel(app) {
 
+    private val repository = ListingsRepository(getApplication())
     private val listingId: String? = savedStateHandle["id"]
     private val _state = MutableStateFlow(ListingDetailState())
     val state = _state.asStateFlow()
@@ -36,25 +38,11 @@ class ListingDetailViewModel(
         val id = listingId ?: return
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true, error = null)
-            try {
-                val dto = ApiClient.listings.get(id)
+            val result = repository.fetchDetails(id)
 
-                val platformsList = dto.platformStates?.map { it.platform } ?: emptyList()
-                val allImagesList = dto.images?.map { Config.imageUrl(it.url) } ?: emptyList()
-                val thumb = allImagesList.firstOrNull()
-
-                val uiModel = ListingItemUi(
-                    id = dto.id,
-                    title = dto.title,
-                    price = dto.price ?: "0.00",
-                    status = dto.status ?: "UNKNOWN",
-                    platforms = platformsList,
-                    thumbnailUrl = thumb,
-                    description = dto.description ?: "",
-                    allImages = allImagesList
-                )
-                _state.value = _state.value.copy(isLoading = false, listing = uiModel)
-            } catch (e: Exception) {
+            result.onSuccess { item ->
+                _state.value = _state.value.copy(isLoading = false, listing = item)
+            }.onFailure { e ->
                 _state.value = _state.value.copy(isLoading = false, error = "Nie udało się pobrać: ${e.message}")
             }
         }
@@ -65,7 +53,7 @@ class ListingDetailViewModel(
         viewModelScope.launch {
             _state.value = _state.value.copy(isLoading = true)
             try {
-                ApiClient.listings.delete(id)
+                repository.delete(id)
                 _state.value = _state.value.copy(isLoading = false, isDeleted = true)
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = "Błąd usuwania: ${e.message}")

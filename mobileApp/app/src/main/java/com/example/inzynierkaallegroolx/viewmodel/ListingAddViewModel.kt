@@ -6,6 +6,7 @@ import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.example.inzynierkaallegroolx.network.ApiClient
 import com.example.inzynierkaallegroolx.network.ListingCreateBody
+import com.example.inzynierkaallegroolx.repository.ListingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
@@ -25,12 +26,13 @@ data class ListingAddState(
     val selectedPhotos: List<Uri> = emptyList(),
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
-    val error: String? = null,
-    val photosCount: Int = 0
+    val error: String? = null
+//    val photosCount: Int = 0
 )
 
 class ListingAddViewModel(app: Application) : AndroidViewModel(app) {
 
+    private val repository = ListingsRepository(app)
     private val _state = MutableStateFlow(ListingAddState())
     val state = _state.asStateFlow()
 
@@ -46,10 +48,10 @@ class ListingAddViewModel(app: Application) : AndroidViewModel(app) {
     fun toggleAllegro(checked: Boolean) { _state.value = _state.value.copy(platformAllegro = checked) }
     fun toggleOlx(checked: Boolean) { _state.value = _state.value.copy(platformOlx = checked) }
 
-    // Dodawanie zdjęć (Mock) - jeśli stare przyciski są używane
-    fun addPhotoMock() {
-        _state.value = _state.value.copy(photosCount = _state.value.photosCount + 1)
-    }
+//    // Dodawanie zdjęć (Mock) - jeśli stare przyciski są używane
+//    fun addPhotoMock() {
+//        _state.value = _state.value.copy(photosCount = _state.value.photosCount + 1)
+//    }
 
     //dodawanie prawdziwych zdjęć
     fun addPhotos(uris: List<Uri>) {
@@ -77,20 +79,20 @@ class ListingAddViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
 
+        val platformsToSend = mutableListOf<String>()
+        if (s.platformAllegro) platformsToSend.add("ALLEGRO")
+        if (s.platformOlx) platformsToSend.add("OLX")
+
         viewModelScope.launch {
             _state.value = s.copy(isLoading = true, error = null)
             try {
-                val createdListing = ApiClient.listings.create(
-                    ListingCreateBody(
-                        title = s.title,
-                        description = s.description,
-                        price = priceDouble
-                    )
+                repository.create(
+                    title = s.title,
+                    description = s.description,
+                    price = priceDouble,
+                    platforms = platformsToSend,
+                    photos = s.selectedPhotos
                 )
-                if (s.selectedPhotos.isNotEmpty()) {
-                    uploadPhotos(createdListing.id, s.selectedPhotos)
-                }
-
                 _state.value = s.copy(isLoading = false, isSuccess = true)
             } catch (e: Exception) {
                 _state.value = s.copy(isLoading = false, error = "Błąd: ${e.message}")

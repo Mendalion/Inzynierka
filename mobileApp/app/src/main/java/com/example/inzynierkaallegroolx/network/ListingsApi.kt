@@ -27,6 +27,7 @@ data class ListingCreateBody(
     val title: String,
     val description: String,
     val price: Double,
+    val platforms: List<String>
 )
 
 data class ListingUpdateBody(
@@ -49,7 +50,13 @@ interface ListingsApi {
     suspend fun update(@Path("id") id: String, @Body body: ListingUpdateBody): ListingDto
 
     @DELETE("listings/{id}")
-    suspend fun delete(@Path("id") id: String): Any
+    suspend fun delete(@Path("id") id: String): Unit
+
+    @DELETE("listings/{id}/images/{imageId}")
+    suspend fun deleteImage(
+        @Path("id") listingId: String,
+        @Path("imageId") imageId: String
+    ): Unit
 
     @POST("listings/{id}/archive")
     suspend fun archive(@Path("id") id: String): Any

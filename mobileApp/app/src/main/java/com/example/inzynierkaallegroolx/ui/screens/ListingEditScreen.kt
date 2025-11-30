@@ -33,7 +33,6 @@ fun ListingEditScreen(
 ) {
     val state by vm.state.collectAsState()
 
-    //Launcher do wyboru zdjęć z galerii
     val photoPickerLauncher = rememberLauncherForActivityResult(
         contract = ActivityResultContracts.PickMultipleVisualMedia(),
         onResult = { uris -> vm.addPhotos(uris) }
@@ -94,16 +93,16 @@ fun ListingEditScreen(
 
                 Spacer(modifier = Modifier.height(24.dp))
 
-                Text("Edytuj zdjęcia", style = MaterialTheme.typography.titleMedium)
+                Text("Zdjęcia", style = MaterialTheme.typography.titleMedium)
                 Spacer(modifier = Modifier.height(8.dp))
 
                 Row(
                     modifier = Modifier
                         .fillMaxWidth()
-                        .height(100.dp), // stała wysokość kontenera na zdjęcia
+                        .height(100.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // przycisk dodawania
+                    // Przycisk "Dodaj"
                     Box(
                         modifier = Modifier
                             .size(80.dp)
@@ -118,31 +117,50 @@ fun ListingEditScreen(
                         Icon(Icons.Default.Add, contentDescription = "Dodaj")
                     }
 
-                    //Wyświetlanie listy zdjęć z servera lub lokalnych
-                    state.images.forEach { img ->
-                        Box(
-                            modifier = Modifier.size(80.dp)
-                        ) {
+                    state.serverImages.forEach { img ->
+                        Box(modifier = Modifier.size(80.dp)) {
                             AsyncImage(
-                                model = img.localUri ?: img.remoteUrl, //wybranie zródła
+                                model = img.url,
                                 contentDescription = null,
                                 modifier = Modifier
                                     .fillMaxSize()
                                     .background(Color.Gray.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
                                 contentScale = ContentScale.Crop
                             )
-
-                            //przycisk usuwania
                             Icon(
                                 imageVector = Icons.Default.Close,
                                 contentDescription = "Usuń",
                                 tint = Color.Red,
                                 modifier = Modifier
                                     .align(Alignment.TopEnd)
-                                    .background(Color.White, RoundedCornerShape(50)) // Tło dla lepszej widoczności
+                                    .background(Color.White, RoundedCornerShape(50))
                                     .padding(2.dp)
                                     .size(20.dp)
-                                    .clickable { vm.removePhoto(img) }
+                                    .clickable { vm.deleteServerPhoto(img) }
+                            )
+                        }
+                    }
+
+                    state.newLocalImages.forEach { uri ->
+                        Box(modifier = Modifier.size(80.dp)) {
+                            AsyncImage(
+                                model = uri,
+                                contentDescription = null,
+                                modifier = Modifier
+                                    .fillMaxSize()
+                                    .background(Color.Gray.copy(alpha = 0.1f), RoundedCornerShape(8.dp)),
+                                contentScale = ContentScale.Crop
+                            )
+                            Icon(
+                                imageVector = Icons.Default.Close,
+                                contentDescription = "Usuń",
+                                tint = Color.Red,
+                                modifier = Modifier
+                                    .align(Alignment.TopEnd)
+                                    .background(Color.White, RoundedCornerShape(50))
+                                    .padding(2.dp)
+                                    .size(20.dp)
+                                    .clickable { vm.removeNewPhoto(uri) }
                             )
                         }
                     }

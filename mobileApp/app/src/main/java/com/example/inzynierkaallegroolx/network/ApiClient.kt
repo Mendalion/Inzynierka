@@ -14,6 +14,7 @@ import retrofit2.http.Query
 import retrofit2.http.Body
 import retrofit2.http.Path
 import retrofit2.http.PATCH
+import java.util.concurrent.TimeUnit
 
 interface StatsApi {
     @GET("stats/listings/views") suspend fun views(@Query("listingId") listingId: String): ViewsResponse
@@ -52,11 +53,11 @@ object ApiClient {
 
     fun setTokenProvider(provider: () -> String?) { tokenProvider = provider }
 
+    private val logging = HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
+
     private val moshi = Moshi.Builder()
         .add(KotlinJsonAdapterFactory())
         .build()
-
-    private val logging = HttpLoggingInterceptor().setLevel(HttpLoggingInterceptor.Level.BODY)
 
     // Client that attaches Authorization header when available
     private val authedClient = OkHttpClient.Builder()
@@ -74,6 +75,8 @@ object ApiClient {
         .addInterceptor(logging)
         .build()
 
+
+
     private val retrofitAuthed = Retrofit.Builder()
         .baseUrl(Config.BASE_URL)
         .addConverterFactory(MoshiConverterFactory.create(moshi))
@@ -86,6 +89,7 @@ object ApiClient {
         .client(publicClient)
         .build()
 
+
     // Use public client for AuthApi to avoid sending stale/invalid tokens
     val auth: AuthApi = retrofitPublic.create(AuthApi::class.java)
 
@@ -96,11 +100,12 @@ object ApiClient {
     val user: UserApi = retrofitAuthed.create(UserApi::class.java)
 
     fun downloadReportFile(id: String): ByteArray? {
-        val url = "http://10.0.2.2:4000/reports/$id/download"
+        val url = "${Config.BASE_URL}/reports/$id/download"
         return try {
             val req = okhttp3.Request.Builder().url(url).get().build()
             val resp = authedClient.newCall(req).execute()
             if (resp.isSuccessful) resp.body?.bytes() else null
         } catch (_: Exception) { null }
     }
+
 }

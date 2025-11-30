@@ -1,31 +1,136 @@
 package com.example.inzynierkaallegroolx.repository
 
+import android.content.Context
+import android.net.Uri
 import com.example.inzynierkaallegroolx.Config
+import com.example.inzynierkaallegroolx.data.AppDatabase
+import com.example.inzynierkaallegroolx.data.listings.ListingEntity
 import com.example.inzynierkaallegroolx.network.ApiClient
+import com.example.inzynierkaallegroolx.network.ListingCreateBody
+import com.example.inzynierkaallegroolx.network.ListingUpdateBody
+import com.example.inzynierkaallegroolx.ui.model.ListingImageUi
 import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
+import okhttp3.MediaType.Companion.toMediaTypeOrNull
+import okhttp3.MultipartBody
+import okhttp3.RequestBody.Companion.asRequestBody
+import java.io.File
+import java.io.FileOutputStream
 
-class ListingsRepository {
-    suspend fun fetch(): Result<List<ListingItemUi>> = withContext(Dispatchers.IO) {
+class ListingsRepository(private val context: Context) {
+
+    private val listingDao = AppDatabase.getDatabase(context).listingDao()
+
+    private fun mapDtoToEntity(dto: com.example.inzynierkaallegroolx.network.ListingDto): ListingEntity {
+        val platformsStr = dto.platformStates?.joinToString(",") { it.platform } ?: ""
+        val rawUrl = dto.images?.firstOrNull()?.url
+        val thumb = Config.imageUrl(rawUrl)
+
+        return ListingEntity(
+            id = dto.id,
+            title = dto.title,
+            description = dto.description ?: "",
+            price = dto.price ?: "0.00",
+            status = dto.status ?: "UNKNOWN",
+            thumbnailUrl = thumb,
+            platforms = platformsStr
+        )
+    }
+
+    suspend fun fetchAll(): Result<List<ListingItemUi>> = withContext(Dispatchers.IO) {
         return@withContext try {
             val resultDto = ApiClient.listings.getListings()
+            val entities = resultDto.map { mapDtoToEntity(it) }
 
-            val list = resultDto.map { dto ->
-                //mapowanie platform
-                val platformsList = dto.platformStates?.map { it.platform } ?: emptyList()
-                //mapowanie miniatury
-                val thumb = Config.imageUrl(dto.images?.firstOrNull()?.url)
+            listingDao.upsertAll(entities)
+
+            val uiList = entities.map { entity ->
                 ListingItemUi(
-                    id = dto.id,
-                    title = dto.title,
-                    price = dto.price ?: "0.00",
-                    status = dto.status ?: "UNKNOWN",
-                    platforms = platformsList,
-                    thumbnailUrl = thumb
+                    id = entity.id,
+                    title = entity.title,
+                    price = entity.price,
+                    status = entity.status,
+                    platforms = if (entity.platforms.isNotEmpty()) entity.platforms.split(",") else emptyList(),
+                    thumbnailUrl = entity.thumbnailUrl,
+                    description = entity.description,
+                    allImages = emptyList()
                 )
             }
-            Result.success(list)
+            Result.success(uiList)
         } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun fetchDetails(id: String): Result<ListingItemUi> = withContext(Dispatchers.IO) {
+        return@withContext try {
+            val dto = ApiClient.listings.get(id)
+
+            val entity = mapDtoToEntity(dto)
+            listingDao.upsertAll(listOf(entity))
+
+            val allImagesUi = dto.images?.map {
+                ListingImageUi(it.id, Config.imageUrl(it.url) ?: "")
+            } ?: emptyList()
+
+            val uiModel = ListingItemUi(
+                id = dto.id,
+                title = dto.title,
+                price = dto.price ?: "0.00",
+                status = dto.status ?: "UNKNOWN",
+                platforms = dto.platformStates?.map { it.platform } ?: emptyList(),
+                thumbnailUrl = entity.thumbnailUrl,
+                description = dto.description ?: "",
+                allImages = allImagesUi
+            )
+            Result.success(uiModel)
+        } catch (e: Exception) { Result.failure(e) }
+    }
+
+    suspend fun create(title: String, description: String, price: Double, platforms: List<String>, photos: List<Uri>) = withContext(Dispatchers.IO) {
+        val createdDto = ApiClient.listings.create(ListingCreateBody(title, description, price, platforms))
+        if (photos.isNotEmpty()) {
+            uploadPhotos(createdDto.id, photos)
+        }
+        val entity = mapDtoToEntity(createdDto)
+        listingDao.upsertAll(listOf(entity))
+        createdDto
+    }
+
+    suspend fun deleteImage(listingId: String, imageId: String) = withContext(Dispatchers.IO) {
+        //usuwanie na serwerze
+        ApiClient.listings.deleteImage(listingId, imageId)
+        //pobieranie lokalną baze
+        fetchDetails(listingId)
+    }
+
+    suspend fun update(id: String, title: String?, description: String?, price: Double?, newPhotos: List<Uri>) = withContext(Dispatchers.IO) {
+        ApiClient.listings.update(id, ListingUpdateBody(title, description, price))
+        if (newPhotos.isNotEmpty()) {
+            uploadPhotos(id, newPhotos)
+        }
+        fetchDetails(id)
+    }
+
+    suspend fun delete(id: String) = withContext(Dispatchers.IO) {
+        ApiClient.listings.delete(id)
+    }
+
+    private suspend fun uploadPhotos(listingId: String, uris: List<Uri>) {
+        val contentResolver = context.contentResolver
+        uris.forEach { uri ->
+            try {
+                val inputStream = contentResolver.openInputStream(uri) ?: return@forEach
+                val tempFile = File.createTempFile("upload", ".jpg", context.cacheDir)
+                val outputStream = FileOutputStream(tempFile)
+                inputStream.copyTo(outputStream)
+                inputStream.close()
+                outputStream.close()
+
+                val requestFile = tempFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
+                val body = MultipartBody.Part.createFormData("file", tempFile.name, requestFile)
+                ApiClient.listings.uploadImage(listingId, body)
+                tempFile.delete()
+            } catch (e: Exception) { e.printStackTrace() }
+        }
     }
 }
