@@ -27,7 +27,7 @@ docker-compose up
 (cd) server
     //dodac plik .env na wzór .envexample
     (jednorazowo)nmp install
-    npm run prisma:migrate
+    npm run prisma:migrate //ewentualnie to do czyszczenia i aktualizacji: npx prisma migrate reset
     npm run dev  
     npx tsx src/test_full.ts //testy
 do mobileApp

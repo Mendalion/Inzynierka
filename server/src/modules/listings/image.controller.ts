@@ -9,7 +9,6 @@ import { prisma } from '../../db/prisma.js';
 const router = Router();
 const upload = multer({ dest: path.join(process.cwd(), 'uploads') });
 
-// Definicja brakującego schema
 const schema = z.object({
   url: z.string().url() // Walidacja czy to poprawny URL
 });
@@ -33,7 +32,7 @@ router.post('/:id/images', authMiddleware, async (req, res) => {
 });
 
 //Usuwanie zdjęcia
-router.delete('/images/:imageId', authMiddleware, async (req, res) => {
+router.delete('/:id/images/:imageId', authMiddleware, async (req, res) => {
   const userId = req.userId!;
   const imageId = req.params.imageId;
 

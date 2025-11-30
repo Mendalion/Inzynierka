@@ -12,11 +12,11 @@ const updateSchema = z.object({
     price: z.number().optional() 
 });
 
-//Schema do ręcznego tworzenia (dla testów)
 const createSchema = z.object({
     title: z.string(),
     description: z.string(),
-    price: z.number()
+    price: z.number(),
+    platforms: z.array(z.string()).optional()
 });
 
 //Pobierz wszystkie ogłoszenia użytkownika
@@ -30,23 +30,37 @@ router.get('/', authMiddleware, async (req, res) => {
   res.json(listings.map(toListingDTO));
 });
 
-//Ręczne dodawanie ogłoszenia (TESTING)
 router.post('/', authMiddleware, async (req, res) => {
     try {
         const userId = req.userId!;
         const data = createSchema.parse(req.body);
         
+        const platformStatesData = data.platforms?.map(platformName => ({
+            platform: platformName as 'ALLEGRO' | 'OLX',
+            status: 'ACTIVE' as const,
+            platformListingId: `PENDING_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`
+        })) || [];
+
         const listing = await prisma.listing.create({
             data: {
                 userId,
                 title: data.title,
                 description: data.description,
                 price: data.price,
-                status: 'ACTIVE'
+                status: 'ACTIVE',
+                platformStates: {
+                    create: platformStatesData
+                }
+            },
+            include: {
+                images: true,
+                platformStates: true
             }
         });
+
         res.json(toListingDTO(listing));
     } catch (e: any) {
+        console.error(e);
         res.status(400).json({ error: e.message });
     }
 });

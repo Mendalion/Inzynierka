@@ -79,7 +79,7 @@ enum ListingStatus {
 
 model ListingPlatformState {
   id              String       @id @default(cuid())
-  listing         Listing      @relation(fields: [listingId], references: [id])
+  listing         Listing      @relation(fields: [listingId], references: [id], onDelete: Cascade)
   listingId       String
   platform        Platform
   platformListingId String
@@ -92,7 +92,7 @@ model ListingPlatformState {
 
 model ListingImage {
   id        String   @id @default(cuid())
-  listing   Listing  @relation(fields: [listingId], references: [id])
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
   listingId String
   url       String
   createdAt DateTime @default(now())
@@ -136,7 +136,7 @@ model MessageTemplate {
 
 model StatsView {
   id        String   @id @default(cuid())
-  listing   Listing  @relation(fields: [listingId], references: [id])
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
   listingId String
   timestamp DateTime
   count     Int
@@ -144,7 +144,7 @@ model StatsView {
 
 model StatsSale {
   id        String   @id @default(cuid())
-  listing   Listing  @relation(fields: [listingId], references: [id])
+  listing   Listing  @relation(fields: [listingId], references: [id], onDelete: Cascade)
   listingId String
   timestamp DateTime
   count     Int
