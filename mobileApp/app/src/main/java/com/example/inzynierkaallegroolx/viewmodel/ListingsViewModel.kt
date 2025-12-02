@@ -91,7 +91,10 @@ class ListingsViewModel(app: Application) : AndroidViewModel(app) {
                 repository.delete(id)
                 loadListings()
             } catch (e: Exception) {
-                _state.value = _state.value.copy(isLoading = false, error = "Nie udało się usunąć")
+                _state.value = _state.value.copy(
+                    isLoading = false,
+                    error = e.message ?: "Nie udało się usunąć"
+                )
             }
         }
     }

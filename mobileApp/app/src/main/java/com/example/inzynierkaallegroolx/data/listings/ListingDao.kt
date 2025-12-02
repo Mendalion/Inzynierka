@@ -10,6 +10,9 @@ interface ListingDao {
     @Query("SELECT * FROM listings")
     suspend fun getAll(): List<ListingEntity>
 
+    @Query("SELECT * FROM listings WHERE id = :id")
+    suspend fun getById(id: String): ListingEntity?
+
     @Query("SELECT * FROM listings")
     fun observeAll(): kotlinx.coroutines.flow.Flow<List<ListingEntity>>
 
@@ -18,4 +21,7 @@ interface ListingDao {
 
     @Query("DELETE FROM listings")
     suspend fun clearAll()
+
+    @Query("DELETE FROM listings WHERE id = :id")
+    suspend fun deleteById(id: String)
 }
