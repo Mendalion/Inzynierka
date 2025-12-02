@@ -9,6 +9,9 @@ const envSchema = z.object({
   JWT_ACCESS_EXP: z.string().default('15m'),
   JWT_REFRESH_EXP: z.string().default('30d'),
   PORT: z.string().default('4000'),
+  ALLEGRO_CLIENT_ID: z.string(),
+  ALLEGRO_CLIENT_SECRET: z.string(),
+  ALLEGRO_REDIRECT_URI: z.string().url().optional(),
 });
 
 const parsed = envSchema.safeParse(process.env);
