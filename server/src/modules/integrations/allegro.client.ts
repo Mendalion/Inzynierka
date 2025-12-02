@@ -1,7 +1,7 @@
 // Placeholder Allegro client
 //narazie dla sanboxa
 const ALLEGRO_API_BASE = 'https://api.allegro.pl.allegrosandbox.pl';
-const ALLEGRO_AUTH_BASE = 'https://allegrosandbox.pl/auth/oauth';
+const ALLEGRO_AUTH_BASE = 'https://allegro.pl.allegrosandbox.pl/auth/oauth';
 
 interface AllegroListing { id: string; title: string; price: number }
 interface AllegroConversation { conversationId: string; messages: Array<{ sender: string; body: string; sentAt: string }> }
@@ -70,13 +70,13 @@ export async function fetchAllegroMessages(accessToken: string): Promise<Allegro
 }
 
 export function getAllegroAuthUrl(state: string) {
-  const redirectUri = process.env.ALLEGRO_REDIRECT_URI || 'http://localhost:4000/api/integrations/oauth/allegro/callback';
+  const redirectUri = process.env.ALLEGRO_REDIRECT_URI || 'http://localhost:4000/integrations/oauth/allegro/callback';
   
   return `${ALLEGRO_AUTH_BASE}/authorize?response_type=code&client_id=${process.env.ALLEGRO_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
 }
 
 export async function exchangeAllegroCode(code: string) {
-  const redirectUri = process.env.ALLEGRO_REDIRECT_URI || 'http://localhost:4000/api/integrations/oauth/allegro/callback';
+  const redirectUri = process.env.ALLEGRO_REDIRECT_URI || 'http://localhost:4000/integrations/oauth/allegro/callback';
   const clientId = process.env.ALLEGRO_CLIENT_ID!;
   const clientSecret = process.env.ALLEGRO_CLIENT_SECRET!;
 
