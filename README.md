@@ -21,6 +21,12 @@ i w build.gradle.kts
 //    }
     compileSdk = 36
 
+nowy sposób
+cd Inzynierka
+docker-compose up
+
+
+
 git clone -b olxAllegro  https://github.com/Mendalion/Inzynierka 
 cd Inzynierka
 docker-compose up

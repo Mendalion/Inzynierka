@@ -89,8 +89,6 @@ object ApiClient {
         .client(publicClient)
         .build()
 
-
-    // Use public client for AuthApi to avoid sending stale/invalid tokens
     val auth: AuthApi = retrofitPublic.create(AuthApi::class.java)
 
     val listings: ListingsApi = retrofitAuthed.create(ListingsApi::class.java)
@@ -98,6 +96,7 @@ object ApiClient {
     val stats: StatsApi = retrofitAuthed.create(StatsApi::class.java)
     val reports: ReportsApi = retrofitAuthed.create(ReportsApi::class.java)
     val user: UserApi = retrofitAuthed.create(UserApi::class.java)
+    val integration: IntegrationApi = retrofitAuthed.create(IntegrationApi::class.java)
 
     fun downloadReportFile(id: String): ByteArray? {
         val url = "${Config.BASE_URL}/reports/$id/download"

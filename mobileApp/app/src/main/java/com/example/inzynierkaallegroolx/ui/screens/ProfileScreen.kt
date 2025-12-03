@@ -10,18 +10,21 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Person
 import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material.icons.filled.ShoppingCart
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavController
+import com.example.inzynierkaallegroolx.ui.components.AllegroLoginDialog
 import com.example.inzynierkaallegroolx.ui.components.AppBottomBar
 import com.example.inzynierkaallegroolx.ui.components.AppTopBar
 import com.example.inzynierkaallegroolx.viewmodel.ProfileViewModel
@@ -34,10 +37,30 @@ fun ProfileScreen(
 ) {
     val state by vm.state.collectAsState()
 
-    //lokalne stany dla pól edycji (żeby można było pisać)
+    //
+    //tylko dla emulatora narazie odpalanie przegladarki systemowej
+    //
+    val context = LocalContext.current
+    var manualCodeInput by remember { mutableStateOf("") }
+//    val showAllegroLogin by vm.showAllegroLogin.collectAsState()
+//    val allegroUrl by vm.allegroAuthUrl.collectAsState()
+//
+//    if (showAllegroLogin && allegroUrl.isNotEmpty()) {
+//        AllegroLoginDialog(
+//            authUrl = allegroUrl,
+//            onDismiss = { vm.dismissAllegroLogin() },
+//            onCodeCaught = { code ->
+//                vm.finishAllegroAuth(code)
+//            }
+//        )
+//    }
+
+
+    //lokalne stany dla pól edycji
     //synchronizujemy je, gdy przyjdą dane z serwera
     var nameInput by remember(state.name) { mutableStateOf(state.name) }
     var phoneInput by remember(state.phone) { mutableStateOf(state.phone) }
+
 
     Scaffold(
         topBar = { AppTopBar("Twój Profil", navController, showBackArrow = true, showAvatar = false) },
@@ -125,6 +148,55 @@ fun ProfileScreen(
                     }
                 }
             }
+
+            Spacer(modifier = Modifier.height(24.dp))
+
+            Text("Integracje", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.align(Alignment.Start))
+            Spacer(modifier = Modifier.height(8.dp))
+
+            //
+            //logowanie dla emulatora
+            //
+            Button(
+                onClick = { vm.startAllegroAuth(context) },
+                modifier = Modifier.fillMaxWidth().height(50.dp),
+                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5A00))
+            ) {
+                Icon(Icons.Default.ShoppingCart, null, tint = Color.White)
+                Spacer(Modifier.width(8.dp))
+                Text("Zaloguj w Allegro", color = Color.White)
+            }
+            Spacer(modifier = Modifier.height(16.dp))
+            OutlinedTextField(
+                value = manualCodeInput,
+                onValueChange = { manualCodeInput = it },
+                label = { Text("Wklej kod tutaj (z paska adresu)") },
+                modifier = Modifier.fillMaxWidth(),
+                singleLine = true
+            )
+            Spacer(modifier = Modifier.height(8.dp))
+            Button(
+                onClick = {
+                    if (manualCodeInput.isNotEmpty()) {
+                        vm.finishAllegroAuth(manualCodeInput)
+                    }
+                },
+                modifier = Modifier.fillMaxWidth(),
+                enabled = manualCodeInput.isNotEmpty()
+            ) {
+                Text("Zatwierdź kod")
+            }
+
+            //prze to ze w emulatorze nie dziala wewnetrzna przegladarka
+//            Button(
+//                onClick = { vm.startAllegroAuth() },
+//                modifier = Modifier.fillMaxWidth().height(50.dp),
+//                colors = ButtonDefaults.buttonColors(containerColor = Color(0xFFFF5A00)) // Kolor Allegro (pomarańczowy)
+//            ) {
+//                Icon(Icons.Default.ShoppingCart, null, tint = Color.White)
+//                Spacer(Modifier.width(8.dp))
+//                Text("Połącz z Allegro", color = Color.White, fontWeight = FontWeight.Bold)
+//            }
 
             //komunikaty o błędach/sukcesie
             if (state.error != null) {

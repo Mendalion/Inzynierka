@@ -15,6 +15,31 @@ services:
     image: adminer:latest
     ports:
       - '8080:8080'
+
+  server:
+    build: ./server
+    ports:
+      - '4000:4000'
+    depends_on:
+      - db
+    env_file:
+      - ./server/.env
+    environment:
+      DATABASE_URL: postgresql://user:password@db:5432/inzynierka?schema=public
+      ALLEGRO_REDIRECT_URI: https://brachydactylic-rowena-unconsumptively.ngrok-free.dev/integrations/oauth/allegro/callback
+  ngrok:
+    image: ngrok/ngrok:latest
+    command:
+      - "http"
+      - "--domain=brachydactylic-rowena-unconsumptively.ngrok-free.dev"
+      - "server:4000"
+    environment:
+      NGROK_AUTHTOKEN: "36JHxEi2Nx2GOmfYv1x3l6wPaLb_4mnckgcfiz3YFnGydUK5N"
+    ports:
+      - "4040:4040"
+    depends_on:
+      - server
+
 volumes:
   db_data:
 

@@ -11,7 +11,7 @@ const envSchema = z.object({
   PORT: z.string().default('4000'),
   ALLEGRO_CLIENT_ID: z.string(),
   ALLEGRO_CLIENT_SECRET: z.string(),
-  ALLEGRO_REDIRECT_URI: z.string().url().optional(),
+  ALLEGRO_REDIRECT_URI: z.string().url(),
 });
 
 const parsed = envSchema.safeParse(process.env);

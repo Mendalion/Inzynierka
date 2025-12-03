@@ -70,37 +70,72 @@ export async function fetchAllegroMessages(accessToken: string): Promise<Allegro
 }
 
 export function getAllegroAuthUrl(state: string) {
-  const redirectUri = process.env.ALLEGRO_REDIRECT_URI || 'http://localhost:4000/integrations/oauth/allegro/callback';
-  
+  const redirectUri = process.env.ALLEGRO_REDIRECT_URI;
+  if (!redirectUri) throw new Error("Brak ALLEGRO_REDIRECT_URI w pliku .env");
   return `${ALLEGRO_AUTH_BASE}/authorize?response_type=code&client_id=${process.env.ALLEGRO_CLIENT_ID}&redirect_uri=${encodeURIComponent(redirectUri)}&state=${state}`;
 }
 
 export async function exchangeAllegroCode(code: string) {
-  const redirectUri = process.env.ALLEGRO_REDIRECT_URI || 'http://localhost:4000/integrations/oauth/allegro/callback';
+  const redirectUri = process.env.ALLEGRO_REDIRECT_URI;
   const clientId = process.env.ALLEGRO_CLIENT_ID!;
   const clientSecret = process.env.ALLEGRO_CLIENT_SECRET!;
 
+  if (!redirectUri) throw new Error("Brak ALLEGRO_REDIRECT_URI w pliku env");
+  console.log(`wymiana kodu na token dla RedirectURI: ${redirectUri}`);
+
   const authHeader = 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-  const url = `${ALLEGRO_AUTH_BASE}/token?grant_type=authorization_code&code=${code}&redirect_uri=${encodeURIComponent(redirectUri)}`;
+  const url = `${ALLEGRO_AUTH_BASE}/token`;
 
-  const res = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Authorization': authHeader,
-    }
-  });
+  try {
+      const res = await fetch(url, {
+        method: 'POST',
+        headers: {
+            'Authorization': authHeader,
+            'Content-Type': 'application/x-www-form-urlencoded' 
+        },
+        body: new URLSearchParams({
+            grant_type: 'authorization_code',
+            code: code,
+            redirect_uri: redirectUri
+        }).toString()
+      });
 
-  if (!res.ok) {
-    const txt = await res.text();
-    throw new Error(`Failed to exchange token: ${txt}`);
+      if (!res.ok) {
+        const txt = await res.text();
+        throw new Error(`Allegro zwróciło błąd ${res.status}: ${txt}`);
+      }
+
+      const data: any = await res.json();
+      
+      return {
+        accessToken: data.access_token,
+        refreshToken: data.refresh_token,
+        expiresIn: data.expires_in
+      };
+
+  } catch (error: any) {
+      console.error("FETCH ERROR:", error);
+      if (error.cause) console.error("CAUSE:", error.cause);
+      throw error;
   }
+  // const res = await fetch(url, {
+  //   method: 'POST',
+  //   headers: {
+  //     'Authorization': authHeader,
+  //   }
+  // });
 
-  const data: any = await res.json();
+  // if (!res.ok) {
+  //   const txt = await res.text();
+  //   throw new Error(`Failed to exchange token: ${txt}`);
+  // }
+
+  // const data: any = await res.json();
   
-  return {
-    accessToken: data.access_token,
-    refreshToken: data.refresh_token,
-    expiresIn: data.expires_in
-  };
+  // return {
+  //   accessToken: data.access_token,
+  //   refreshToken: data.refresh_token,
+  //   expiresIn: data.expires_in
+  // };
 }
