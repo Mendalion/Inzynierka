@@ -13,8 +13,17 @@ model User {
   passwordHash    String
   name            String?
   phone           String?
+
+  street          String?
+  city            String?
+  zipCode         String?
+  district        String?         
+  state           String?
+  countryCode     String?
+
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
+
   refreshTokens   RefreshToken[]
   integrations    UserIntegration[]
   listings        Listing[]
