@@ -18,7 +18,7 @@ import com.example.inzynierkaallegroolx.data.messages.MessagesDao
         MessageEntity::class,
         MessageTemplateEntity::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 abstract class AppDatabase : RoomDatabase() {

@@ -1,7 +1,7 @@
 import { Router } from 'express';
 import { authMiddleware } from '../auth/auth.middleware.js';
 import { prisma } from '../../db/prisma.js';
-import { fetchAllegroListings } from '../integrations/allegro.client.js';
+// import { fetchAllegroListings } from '../integrations/allegro.client.js';
 import { fetchOlxListings } from '../integrations/olx.client.js';
 
 const router = Router();
@@ -12,7 +12,7 @@ router.post('/', authMiddleware, async (req, res) => {
   const integ = await prisma.userIntegration.findFirst({ where: { userId, platform } });
   if (!integ) return res.status(400).json({ error: 'NO_INTEGRATION' });
   let listings: any[] = [];
-  if (platform === 'ALLEGRO') listings = await fetchAllegroListings(integ.accessToken);
+  // if (platform === 'ALLEGRO') listings = await fetchAllegroListings(integ.accessToken);
   if (platform === 'OLX') listings = await fetchOlxListings(integ.accessToken);
   // Upsert stub
   for (const l of listings) {

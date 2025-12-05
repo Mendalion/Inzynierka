@@ -51,6 +51,7 @@ model UserIntegration {
 enum Platform {
   ALLEGRO
   OLX
+  EBAY
 }
 
 model Listing {
@@ -63,6 +64,7 @@ model Listing {
   status     ListingStatus         @default(ACTIVE)
   archivedAt DateTime?
   version    Int                   @default(1)
+  attributes  Json?
   createdAt  DateTime              @default(now())
   updatedAt  DateTime              @updatedAt
   platformStates ListingPlatformState[]
@@ -104,6 +106,7 @@ model MessageConversation {
   userId    String
   platform  Platform
   platformConversationId String
+  subject   String?
   lastMessageAt DateTime?
   unreadCount Int       @default(0)
   messages   Message[]
@@ -118,6 +121,7 @@ model Message {
   conversationId String
   sender        String
   body          String
+  attachments   Json?
   sentAt        DateTime
   isRead        Boolean  @default(false)
   createdAt     DateTime @default(now())

@@ -8,5 +8,6 @@ data class ConversationEntity(
     @PrimaryKey val id: String,
     val platform: String,
     val unreadCount: Int,
-    val lastMessageAt: String?
+    val lastMessageAt: String?,
+    val subject: String? = null
 )
