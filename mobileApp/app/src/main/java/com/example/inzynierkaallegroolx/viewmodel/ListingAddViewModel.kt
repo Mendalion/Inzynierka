@@ -4,30 +4,30 @@ import android.app.Application
 import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
-import com.example.inzynierkaallegroolx.network.ApiClient
-import com.example.inzynierkaallegroolx.network.ListingCreateBody
+import com.example.inzynierkaallegroolx.network.CategoryParameterDto
 import com.example.inzynierkaallegroolx.repository.ListingsRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.launch
-import okhttp3.MediaType.Companion.toMediaTypeOrNull
-import okhttp3.MultipartBody
-import okhttp3.RequestBody.Companion.asRequestBody
-import java.io.File
-import java.io.FileOutputStream
 
 data class ListingAddState(
     val title: String = "",
     val description: String = "",
-    val category: String = "",
     val price: String = "",
-    val platformAllegro: Boolean = true,
-    val platformOlx: Boolean = false,
+    val category: String = "", // ID kategorii (np. "2")
+
+    val selectedPlatform: String = "ALLEGRO",
+
     val selectedPhotos: List<Uri> = emptyList(),
+
+    // Pola dynamiczne
+    val dynamicFields: List<CategoryParameterDto> = emptyList(),
+    val parameterValues: Map<String, String> = emptyMap(),
+    val isLoadingParams: Boolean = false,
+
     val isLoading: Boolean = false,
     val isSuccess: Boolean = false,
     val error: String? = null
-//    val photosCount: Int = 0
 )
 
 class ListingAddViewModel(app: Application) : AndroidViewModel(app) {
@@ -38,32 +38,50 @@ class ListingAddViewModel(app: Application) : AndroidViewModel(app) {
 
     fun onTitleChange(v: String) { _state.value = _state.value.copy(title = v) }
     fun onDescriptionChange(v: String) { _state.value = _state.value.copy(description = v) }
-    fun onCategoryChange(v: String) { _state.value = _state.value.copy(category = v) }
     fun onPriceChange(v: String) {
         if (v.all { it.isDigit() || it == '.' || it == ',' }) {
             _state.value = _state.value.copy(price = v)
         }
     }
+    fun onCategoryChange(v: String) { _state.value = _state.value.copy(category = v) }
 
-    fun toggleAllegro(checked: Boolean) { _state.value = _state.value.copy(platformAllegro = checked) }
-    fun toggleOlx(checked: Boolean) { _state.value = _state.value.copy(platformOlx = checked) }
+//    fun toggleAllegro(checked: Boolean) { _state.value = _state.value.copy(platformAllegro = checked) }
+//    fun toggleOlx(checked: Boolean) { _state.value = _state.value.copy(platformOlx = checked) }
+    fun selectPlatform(platform: String) {
+        _state.value = _state.value.copy(selectedPlatform = platform)
+    }
 
-//    // Dodawanie zdjęć (Mock) - jeśli stare przyciski są używane
-//    fun addPhotoMock() {
-//        _state.value = _state.value.copy(photosCount = _state.value.photosCount + 1)
-//    }
-
-    //dodawanie prawdziwych zdjęć
     fun addPhotos(uris: List<Uri>) {
         val current = _state.value.selectedPhotos.toMutableList()
         current.addAll(uris)
         _state.value = _state.value.copy(selectedPhotos = current)
     }
 
-    fun removePhoto(uri: Uri) {
-        val current = _state.value.selectedPhotos.toMutableList()
-        current.remove(uri)
-        _state.value = _state.value.copy(selectedPhotos = current)
+    // Pobieranie parametrów
+    fun loadParametersForCategory() {
+        val catId = _state.value.category
+        if (catId.isBlank()) return
+
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isLoadingParams = true, error = null)
+            try {
+                val params = repository.getCategoryParameters(catId)
+                _state.value = _state.value.copy(
+                    isLoadingParams = false,
+                    dynamicFields = params,
+                    parameterValues = emptyMap() // Reset wartości przy zmianie kategorii
+                )
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(isLoadingParams = false, error = "Błąd pobierania parametrów: ${e.message}")
+            }
+        }
+    }
+
+    // Aktualizacja wartości parametru
+    fun onParameterChange(paramId: String, value: String) {
+        val currentMap = _state.value.parameterValues.toMutableMap()
+        currentMap[paramId] = value
+        _state.value = _state.value.copy(parameterValues = currentMap)
     }
 
     fun submitListing() {
@@ -79,47 +97,26 @@ class ListingAddViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
 
-        val platformsToSend = mutableListOf<String>()
-        if (s.platformAllegro) platformsToSend.add("ALLEGRO")
-        if (s.platformOlx) platformsToSend.add("OLX")
+//        val platformsToSend = mutableListOf<String>()
+//        if (s.platformAllegro) platformsToSend.add("ALLEGRO")
+//        if (s.platformOlx) platformsToSend.add("OLX")
 
         viewModelScope.launch {
             _state.value = s.copy(isLoading = true, error = null)
             try {
-                repository.create(
+                repository.createListing(
                     title = s.title,
                     description = s.description,
                     price = priceDouble,
-                    platforms = platformsToSend,
-                    photos = s.selectedPhotos
+//                    platforms = platformsToSend,
+                    platform = s.selectedPlatform,
+                    photos = s.selectedPhotos,
+                    categoryId = s.category.ifBlank { "2" },
+                    parameterValues = s.parameterValues
                 )
                 _state.value = s.copy(isLoading = false, isSuccess = true)
             } catch (e: Exception) {
                 _state.value = s.copy(isLoading = false, error = "Błąd: ${e.message}")
-            }
-        }
-    }
-
-    private suspend fun uploadPhotos(listingId: String, uris: List<Uri>) {
-        val context = getApplication<Application>().applicationContext
-        val contentResolver = context.contentResolver
-
-        uris.forEach { uri ->
-            try {
-                val inputStream = contentResolver.openInputStream(uri) ?: return@forEach
-                val tempFile = File.createTempFile("upload", ".jpg", context.cacheDir)
-                val outputStream = FileOutputStream(tempFile)
-                inputStream.copyTo(outputStream)
-                inputStream.close()
-                outputStream.close()
-
-                val requestFile = tempFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
-                val body = MultipartBody.Part.createFormData("file", tempFile.name, requestFile)
-
-                ApiClient.listings.uploadImage(listingId, body)
-                tempFile.delete()
-            } catch (e: Exception) {
-                e.printStackTrace()
             }
         }
     }

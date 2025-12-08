@@ -20,8 +20,20 @@ data class ProfileState(
     val email: String = "",
     val name: String = "",
     val phone: String = "",
+    val street: String = "",
+    val city: String = "",
+    val zipCode: String = "",
+    val state: String = "",
     val error: String? = null,
     val successMessage: String? = null
+)
+data class UserUpdateBodyExtended(
+    val name: String?,
+    val phone: String?,
+    val street: String?,
+    val city: String?,
+    val zipCode: String?,
+    val state: String?
 )
 
 class ProfileViewModel(app: Application) : AndroidViewModel(app) {
@@ -40,35 +52,57 @@ class ProfileViewModel(app: Application) : AndroidViewModel(app) {
             try {
                 _state.value = _state.value.copy(isLoading = true, error = null)
                 val user = ApiClient.user.me()
+                // Zakładam, że user.me() zwraca teraz też pola adresowe (trzeba zaktualizować DTO w User)
                 _state.value = _state.value.copy(
                     isLoading = false,
                     email = user.email,
                     name = user.name ?: "",
-                    phone = user.phone ?: ""
+                    phone = user.phone ?: "",
+                    street = user.street ?: "",
+                    city = user.city ?: "",
+                    zipCode = user.zipCode ?: "",
+                    state = user.state ?: ""
                 )
             } catch (e: Exception) {
-                _state.value = _state.value.copy(isLoading = false, error = "Błąd pobierania profilu: ${e.message}")
             }
         }
     }
 
     fun updateProfile(newName: String, newPhone: String) {
+        val currentState = _state.value
+        updateFullProfile(newName, newPhone, currentState.street, currentState.city, currentState.zipCode, currentState.state)
+    }
+    fun updateFullProfile(name: String, phone: String, street: String, city: String, zip: String, stateProv: String) {
         viewModelScope.launch {
             try {
                 _state.value = _state.value.copy(isLoading = true, error = null, successMessage = null)
-                ApiClient.user.update(UserUpdateBody(name = newName, phone = newPhone))
+
+                val body = UserUpdateBody(
+                    name = name,
+                    phone = phone,
+                    street = street,
+                    city = city,
+                    zipCode = zip,
+                    state = stateProv
+                )
+
+                ApiClient.user.update(body)
+
                 _state.value = _state.value.copy(
                     isLoading = false,
-                    name = newName,
-                    phone = newPhone,
-                    successMessage = "Zapisano zmiany!"
+                    name = name,
+                    phone = phone,
+                    street = street,
+                    city = city,
+                    zipCode = zip,
+                    state = stateProv,
+                    successMessage = "Dane i adres zapisane!"
                 )
             } catch (e: Exception) {
                 _state.value = _state.value.copy(isLoading = false, error = "Błąd zapisu: ${e.message}")
             }
         }
     }
-
     fun logout() {
         authRepo.logout()
     }

@@ -43,8 +43,25 @@ interface UserApi {
     @GET("user/me/export") suspend fun export(): Map<String, Any>
 }
 
-data class UserMeDto(val id: String, val email: String, val name: String?, val phone: String?)
-data class UserUpdateBody(val name: String?, val phone: String?)
+data class UserMeDto(
+    val id: String,
+    val email: String,
+    val name: String?,
+    val phone: String?,
+    val street: String?,
+    val city: String?,
+    val zipCode: String?,
+    val state: String?
+)
+
+data class UserUpdateBody(
+    val name: String?,
+    val phone: String?,
+    val street: String?,
+    val city: String?,
+    val zipCode: String?,
+    val state: String?
+)
 
 
 

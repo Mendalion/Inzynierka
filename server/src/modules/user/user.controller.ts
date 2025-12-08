@@ -57,13 +57,13 @@ router.delete('/me', authMiddleware, async (req, res) => {
       where: { userId },
       select: { id: true }
     });
-    const listingIds = userListings.map(l => l.id);
+    const listingIds = userListings.map((l: { id: string }) => l.id);
 
     const userConversations = await prisma.messageConversation.findMany({
         where: { userId },
         select: { id: true }
     });
-    const conversationIds = userConversations.map(c => c.id);
+    const conversationIds = userConversations.map((c: { id: string }) => c.id);
 
     await prisma.$transaction([//translakcja zapewnia ze usunie sie wszystko albo nic
       prisma.listingImage.deleteMany({ where: { listingId: { in: listingIds } } }),

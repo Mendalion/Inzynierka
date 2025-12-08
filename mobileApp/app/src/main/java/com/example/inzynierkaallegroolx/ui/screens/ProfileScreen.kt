@@ -56,11 +56,12 @@ fun ProfileScreen(
 //    }
 
 
-    //lokalne stany dla pól edycji
-    //synchronizujemy je, gdy przyjdą dane z serwera
     var nameInput by remember(state.name) { mutableStateOf(state.name) }
     var phoneInput by remember(state.phone) { mutableStateOf(state.phone) }
-
+    var streetInput by remember(state.street) { mutableStateOf(state.street) }
+    var cityInput by remember(state.city) { mutableStateOf(state.city) }
+    var zipInput by remember(state.zipCode) { mutableStateOf(state.zipCode) }
+    var stateInput by remember(state.state) { mutableStateOf(state.state) }
 
     Scaffold(
         topBar = { AppTopBar("Twój Profil", navController, showBackArrow = true, showAvatar = false) },
@@ -112,39 +113,38 @@ fun ProfileScreen(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant.copy(alpha = 0.5f))
             ) {
                 Column(modifier = Modifier.padding(16.dp)) {
-                    Text("Edycja Profilu", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Spacer(modifier = Modifier.height(16.dp))
+                    Text("Dane i Adres (do wysyłki/faktury)", style = MaterialTheme.typography.titleMedium)
 
-                    OutlinedTextField(
-                        value = nameInput,
-                        onValueChange = { nameInput = it },
-                        label = { Text("Imię i Nazwisko") },
-                        modifier = Modifier.fillMaxWidth(),
-                        singleLine = true
-                    )
-                    Spacer(modifier = Modifier.height(12.dp))
+                    OutlinedTextField(value = nameInput, onValueChange = { nameInput = it }, label = { Text("Imię i Nazwisko") })
+                    OutlinedTextField(value = phoneInput, onValueChange = { phoneInput = it }, label = { Text("Telefon") })
 
-                    OutlinedTextField(
-                        value = phoneInput,
-                        onValueChange = { phoneInput = it },
-                        label = { Text("Numer telefonu") },
-                        modifier = Modifier.fillMaxWidth(),
-                        keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Phone),
-                        singleLine = true
-                    )
+                    Spacer(modifier = Modifier.height(8.dp))
+                    Divider()
+                    Spacer(modifier = Modifier.height(8.dp))
 
-                    Spacer(modifier = Modifier.height(16.dp))
+                    OutlinedTextField(value = streetInput, onValueChange = { streetInput = it }, label = { Text("Ulica i nr") })
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        OutlinedTextField(
+                            value = zipInput,
+                            onValueChange = { zipInput = it },
+                            label = { Text("Kod poczt.") },
+                            modifier = Modifier.weight(0.4f)
+                        )
+                        Spacer(Modifier.width(8.dp))
+                        OutlinedTextField(
+                            value = cityInput,
+                            onValueChange = { cityInput = it },
+                            label = { Text("Miasto") },
+                            modifier = Modifier.weight(0.6f)
+                        )
+                    }
+                    OutlinedTextField(value = stateInput, onValueChange = { stateInput = it }, label = { Text("Województwo") })
 
                     Button(
-                        onClick = { vm.updateProfile(nameInput, phoneInput) },
-                        modifier = Modifier.align(Alignment.End),
-                        enabled = !state.isLoading
+                        onClick = { vm.updateFullProfile(nameInput, phoneInput, streetInput, cityInput, zipInput, stateInput) },
+                        modifier = Modifier.align(Alignment.End).padding(top = 16.dp)
                     ) {
-                        if (state.isLoading) {
-                            CircularProgressIndicator(modifier = Modifier.size(20.dp), color = Color.White)
-                        } else {
-                            Text("Zapisz zmiany")
-                        }
+                        Text("Zapisz komplet danych")
                     }
                 }
             }

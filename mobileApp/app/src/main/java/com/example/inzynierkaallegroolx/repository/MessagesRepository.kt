@@ -29,19 +29,22 @@ class MessagesRepository(ctx: Context) {
         }
     }
 
-    //Pobiera szczegóły konwersacji, aktualizując cache
     suspend fun syncConversation(id: String): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val remote = ApiClient.messages.conversation(id)
-
-            //aktualizujemy sama konwersację
             dao.upsertConversations(listOf(
                 ConversationEntity(remote.id, remote.platform, remote.unreadCount, remote.lastMessageAt)
             ))
-
-            //aktualizujemy wiadomości
             val messages = remote.messages.map {
-                MessageEntity(it.id, remote.id, it.sender, it.body, it.sentAt)
+                MessageEntity(
+                    id = it.id,
+                    conversationId = remote.id,
+                    sender = it.sender,
+                    isOwnMessage = it.sender == "ME",
+                    body = it.body,
+                    attachmentsJson = null,
+                    sentAt = it.sentAt
+                )
             }
             dao.upsertMessages(messages)
         }
@@ -62,12 +65,20 @@ class MessagesRepository(ctx: Context) {
     suspend fun reply(conversationId: String, body: String): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {
             val msgDto = ApiClient.messages.reply(conversationId, ReplyBody(body))
+
             dao.upsertMessages(listOf(
-                MessageEntity(msgDto.id, conversationId, msgDto.sender, msgDto.body, msgDto.sentAt)
+                MessageEntity(
+                    id = msgDto.id,
+                    conversationId = conversationId,
+                    sender = msgDto.sender,
+                    isOwnMessage = true,
+                    body = msgDto.body,
+                    attachmentsJson = null,
+                    sentAt = msgDto.sentAt
+                )
             ))
         }
     }
-
     //Szablony Todo
     suspend fun syncTemplates(): Result<Unit> = withContext(Dispatchers.IO) {
         runCatching {

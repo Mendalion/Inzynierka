@@ -23,11 +23,28 @@ data class ListingImageDto(
     val url: String
 )
 
+// --- ZMIANA TUTAJ ---
 data class ListingCreateBody(
     val title: String,
     val description: String,
     val price: Double,
-    val platforms: List<String>
+    val categoryId: String,
+    val platform: String, // Było: val platforms: List<String>
+    val parameterValues: Map<String, String>
+)
+
+data class CategoryParameterDto(
+    val id: String,
+    val name: String,
+    val type: String,
+    val required: Boolean,
+    val unit: String?,
+    val dictionary: List<DictionaryItemDto>?
+)
+
+data class DictionaryItemDto(
+    val id: String,
+    val value: String
 )
 
 data class ListingUpdateBody(
@@ -60,6 +77,9 @@ interface ListingsApi {
 
     @POST("listings/{id}/archive")
     suspend fun archive(@Path("id") id: String): Any
+
+    @GET("/listings/categories/{categoryId}/parameters")
+    suspend fun getCategoryParameters(@Path("categoryId") categoryId: String): List<CategoryParameterDto>
 
     @Multipart
     @POST("listings/{id}/images/upload")

@@ -19,7 +19,7 @@ model User {
   zipCode         String?
   district        String?         
   state           String?
-  countryCode     String?
+  countryCode     String?         @default("PL")
 
   createdAt       DateTime        @default(now())
   updatedAt       DateTime        @updatedAt
@@ -59,7 +59,6 @@ model UserIntegration {
 
 enum Platform {
   ALLEGRO
-  OLX
   EBAY
 }
 
@@ -70,7 +69,7 @@ model Listing {
   title      String
   description String
   price      Decimal               @db.Decimal(10,2)
-  status     ListingStatus         @default(ACTIVE)
+  status     ListingStatus         @default(DRAFT)
   archivedAt DateTime?
   version    Int                   @default(1)
   attributes  Json?
@@ -86,6 +85,7 @@ enum ListingStatus {
   ACTIVE
   SOLD
   ARCHIVED
+  DRAFT
 }
 
 model ListingPlatformState {

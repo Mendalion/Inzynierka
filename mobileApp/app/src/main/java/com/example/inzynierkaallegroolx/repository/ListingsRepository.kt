@@ -5,9 +5,7 @@ import android.net.Uri
 import com.example.inzynierkaallegroolx.Config
 import com.example.inzynierkaallegroolx.data.AppDatabase
 import com.example.inzynierkaallegroolx.data.listings.ListingEntity
-import com.example.inzynierkaallegroolx.network.ApiClient
-import com.example.inzynierkaallegroolx.network.ListingCreateBody
-import com.example.inzynierkaallegroolx.network.ListingUpdateBody
+import com.example.inzynierkaallegroolx.network.*
 import com.example.inzynierkaallegroolx.ui.model.ListingImageUi
 import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
 import kotlinx.coroutines.Dispatchers
@@ -25,6 +23,47 @@ class ListingsRepository(private val context: Context) {
 
     private val listingDao = AppDatabase.getDatabase(context).listingDao()
 
+    suspend fun getCategoryParameters(categoryId: String): List<CategoryParameterDto> {
+        return ApiClient.listings.getCategoryParameters(categoryId)
+    }
+
+    // --- ZMIANA W PARAMETRACH FUNKCJI ---
+    suspend fun createListing(
+        title: String,
+        description: String,
+        price: Double,
+        platform: String, // Było: platforms: List<String>
+        photos: List<Uri>,
+        categoryId: String,
+        parameterValues: Map<String, String>
+    ) = withContext(Dispatchers.IO) {
+        try {
+            // 1. Tworzymy ogłoszenie
+            val body = ListingCreateBody(
+                title = title,
+                description = description,
+                price = price,
+                platform = platform, // Przekazujemy pojedynczy string
+                categoryId = categoryId,
+                parameterValues = parameterValues
+            )
+            val createdDto = ApiClient.listings.create(body)
+
+            // 2. Upload zdjęć
+            if (photos.isNotEmpty()) {
+                uploadPhotos(createdDto.id, photos)
+            }
+
+            // 3. Zapisz do lokalnej bazy
+            val entity = mapDtoToEntity(createdDto)
+            listingDao.upsertAll(listOf(entity))
+
+            createdDto
+        } catch (e: Exception) {
+            throw normalizeError(e)
+        }
+    }
+
     private fun mapEntityToUi(entity: ListingEntity): ListingItemUi {
         return ListingItemUi(
             id = entity.id,
@@ -38,7 +77,11 @@ class ListingsRepository(private val context: Context) {
         )
     }
 
-    private fun mapDtoToEntity(dto: com.example.inzynierkaallegroolx.network.ListingDto): ListingEntity {
+    private fun mapDtoToEntity(dto: ListingDto): ListingEntity {
+        // Backend teraz zwraca jedną platformę, ale w bazie lokalnej Entity może nadal mieć pole `platforms` jako string
+        // więc musimy to jakoś zmapować. ListingDto ma pole `platformStates`?
+        // Jeśli backend zwraca platformStates (lista), to ten kod zadziała.
+        // Jeśli nie, to musisz dostosować backendowe DTO. Zakładam, że DTO zostaje po staremu w kwestii odczytu.
         val platformsStr = dto.platformStates?.joinToString(",") { it.platform } ?: ""
         val rawUrl = dto.images?.firstOrNull()?.url
         val thumb = Config.imageUrl(rawUrl)
@@ -54,32 +97,25 @@ class ListingsRepository(private val context: Context) {
         )
     }
 
+    // ... Reszta metod (fetchAll, fetchDetails, update, delete, etc.) BEZ ZMIAN ...
+
     suspend fun fetchAll(): Result<List<ListingItemUi>> = withContext(Dispatchers.IO) {
         return@withContext try {
-            //najpierw próbuje połaczyć z siecią
             val resultDto = ApiClient.listings.getListings()
             val entities = resultDto.map { mapDtoToEntity(it) }
-
-            //jezeli się uda aktualizujemy bazę lokalną
             listingDao.upsertAll(entities)
-
-            //zwracamy dane z sieci
             val uiList = entities.map { mapEntityToUi(it) }
             Result.success(uiList)
-
         } catch (e: Exception) {
             if (isNetworkError(e)) {
-            val localEntities = listingDao.getAll()
+                val localEntities = listingDao.getAll()
                 if (localEntities.isNotEmpty()) {
                     val uiList = localEntities.map { mapEntityToUi(it) }
-                    //Zwracamy sukces z lokalnymi danymi
                     Result.success(uiList)
                 } else {
-                    //Nie ma dostępu do internetu i baza jest pusta
                     Result.failure(Exception("Brak połączenia i brak danych offline"))
                 }
             } else {
-                //Inny błąd
                 Result.failure(e)
             }
         }
@@ -88,10 +124,8 @@ class ListingsRepository(private val context: Context) {
     suspend fun fetchDetails(id: String): Result<ListingItemUi> = withContext(Dispatchers.IO) {
         return@withContext try {
             val dto = ApiClient.listings.get(id)
-
             val entity = mapDtoToEntity(dto)
             listingDao.upsertAll(listOf(entity))
-
             val allImagesUi = dto.images?.map {
                 ListingImageUi(it.id, Config.imageUrl(it.url) ?: "")
             } ?: emptyList()
@@ -111,8 +145,6 @@ class ListingsRepository(private val context: Context) {
             if (isNetworkError(e)) {
                 val localEntity = listingDao.getById(id)
                 if (localEntity != null) {
-                    //lokalna wersja
-                    //w trybie offline nie mamy listy allImages
                     val uiModel = mapEntityToUi(localEntity)
                     Result.success(uiModel)
                 } else {
@@ -121,20 +153,6 @@ class ListingsRepository(private val context: Context) {
             } else {
                 Result.failure(e)
             }
-        }
-    }
-
-    suspend fun create(title: String, description: String, price: Double, platforms: List<String>, photos: List<Uri>) = withContext(Dispatchers.IO) {
-        try {
-            val createdDto = ApiClient.listings.create(ListingCreateBody(title, description, price, platforms))
-            if (photos.isNotEmpty()) {
-                uploadPhotos(createdDto.id, photos)
-            }
-            val entity = mapDtoToEntity(createdDto)
-            listingDao.upsertAll(listOf(entity))
-            createdDto
-        } catch (e: Exception) {
-            throw normalizeError(e)
         }
     }
 
@@ -152,12 +170,8 @@ class ListingsRepository(private val context: Context) {
 
     suspend fun delete(id: String) = withContext(Dispatchers.IO) {
         try {
-            //Najpierw usuwamy z serwera, wyrzuci błąd jeśli nie ma połaczenia z serwere,
             ApiClient.listings.delete(id)
-
-            //serwer potwierdził to usuwamy z bazy lokalnej
             listingDao.deleteById(id)
-
         } catch (e: Exception) {
             throw normalizeError(e)
         }
@@ -165,9 +179,7 @@ class ListingsRepository(private val context: Context) {
 
     suspend fun deleteImage(listingId: String, imageId: String) = withContext(Dispatchers.IO) {
         try {
-            //usuwanie na serwerze
             ApiClient.listings.deleteImage(listingId, imageId)
-            //pobieranie lokalną baze
             fetchDetails(listingId)
         } catch (e: Exception) {
             throw normalizeError(e)

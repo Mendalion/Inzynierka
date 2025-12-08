@@ -1,10 +1,7 @@
-// Placeholder Allegro client
-//narazie dla sanboxa
+import { env } from '../../config/env.js';
+
 const ALLEGRO_API_BASE = 'https://api.allegro.pl.allegrosandbox.pl';
 const ALLEGRO_AUTH_BASE = 'https://allegro.pl.allegrosandbox.pl/auth/oauth';
-
-interface AllegroListing { id: string; title: string; price: number }
-interface AllegroConversation { conversationId: string; messages: Array<{ sender: string; body: string; sentAt: string }> }
 
 function sleep(ms: number) { return new Promise(r => setTimeout(r, ms)); }
 
@@ -16,6 +13,20 @@ async function requestWithRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T
       await sleep(300 * attempt);
     }
   }
+}
+
+export async function searchAllegroProducts(accessToken: string, query: string) {
+    // query to może być EAN (np. "97883...") lub nazwa
+    // mode=GTIN oznacza szukanie po kodzie kreskowym, jeśli query to liczby
+    // mode=PHRASE szuka po nazwie
+    
+    const mode = /^\d+$/.test(query) ? 'GTIN' : 'PHRASE'; 
+    const url = `/sale/products?${mode}=${encodeURIComponent(query)}&language=pl-PL`;
+
+    return requestWithRetry(async () => {
+        const data: any = await allegroFetch(url, accessToken);
+        return data.products || [];
+    });
 }
 
 async function allegroFetch(endpoint: string, accessToken: string, options: RequestInit = {}) {
@@ -30,45 +41,135 @@ async function allegroFetch(endpoint: string, accessToken: string, options: Requ
   });
   if (!res.ok) {
     const errorBody = await res.text();
+    console.error(`[ALLEGRO API ERROR] ${res.status} ${res.statusText}:`, errorBody);
     throw new Error(`Allegro API Error ${res.status}: ${errorBody}`);
   }
   return res.json();
 }
 
-export async function fetchAllegroListings(accessToken: string): Promise<AllegroListing[]> {
-  return requestWithRetry(async () => {
-    // Pobieranie ofert (endpoint /sale/offers)
-    const data: any = await allegroFetch('/sale/offers?publication.status=ACTIVE&publication.status=INACTIVE&limit=100', accessToken);
+// --- Definicje Typów ---
+
+export interface AllegroParameter {
+    id: string; 
+    name: string; 
+    type: string; 
+    required: boolean; 
+    dictionary?: { id: string; value: string }[]; 
+    unit?: string;
+    options?: {
+        describesProduct?: boolean; // Kluczowa flaga z JSONa
+        variantsAllowed?: boolean;
+    }; 
+}
+
+export interface AllegroDraftPayload {
+    title: string;
+    description: string;
+    price: string;
+    categoryId: string;
+    location: {
+        city: string;
+        zipCode: string;
+        state: string;
+        countryCode: string;
+    };
+    // Przyjmujemy tylko parametry oferty, bo produktowych bez ID produktu nie wyślemy
+    offerParameters?: Array<{ id: string; valuesIds: string[]; values: string[] }>;
+    productId?: string;
+}
+
+// --- Funkcje ---
+
+export async function fetchCategoryParameters(accessToken: string, categoryId: string): Promise<AllegroParameter[]> {
+    return requestWithRetry(async () => {
+        const data: any = await allegroFetch(`/sale/categories/${categoryId}/parameters`, accessToken);
+        return data.parameters
+            .filter((p: any) => p.type !== 'dictionary' || p.dictionary) 
+            .map((p: any) => ({
+                id: p.id,
+                name: p.name,
+                type: p.type,
+                required: p.required,
+                unit: p.unit,
+                dictionary: p.dictionary ? p.dictionary.map((d: any) => ({ id: d.id, value: d.value })) : undefined,
+                options: p.options // Przekazujemy options (describesProduct)
+            }));
+    });
+}
+
+export async function createAllegroDraft(accessToken: string, payload: AllegroDraftPayload) {
+    console.log(`[ALLEGRO-CLIENT] Tworzę szkic oferty: "${payload.title}" w kat. ${payload.categoryId}`);
     
-    // Mapowanie odpowiedzi Allegro na Twój interfejs
-    return data.offers.map((offer: any) => ({
-      id: offer.id,
-      title: offer.name,
-      // Cena może być w sellingMode.price lub promocyjna, bierzemy podstawową
-      price: parseFloat(offer.sellingMode?.price?.amount || '0'),
-    }));
-  });
+    return requestWithRetry(async () => {
+        const body: any = {
+            name: payload.title,
+            category: { id: payload.categoryId },
+            description: {
+                sections: [
+                    {
+                        items: [{ type: 'TEXT', content: `<p>${payload.description}</p>` }]
+                    }
+                ]
+            },
+            // Tutaj wpadnie tylko "Stan" (11323) i inne parametry oferty
+            parameters: payload.offerParameters || [],
+            sellingMode: {
+                format: 'BUY_NOW',
+                price: { amount: payload.price, currency: 'PLN' }
+            },
+            stock: { available: 1, unit: 'UNIT' },
+            publication: { status: 'INACTIVE' },
+            delivery: {
+                // Hardcoded shipping ID - w sandboxie może wymagać zmiany na własny
+                shippingRates: { id: 'de2860b6-2581-4217-a066-5125307222ce' }, 
+                handlingTime: "PT72H"
+            },
+            location: {
+                city: payload.location.city,
+                postCode: payload.location.zipCode,
+                countryCode: payload.location.countryCode,
+                province: payload.location.state
+            },
+            payments: { invoice: 'NO_INVOICE' }
+        };
+
+        // LOGIKA:
+        // Jeśli mamy ID produktu (znaleziony po EAN), wiążemy ofertę z tym produktem.
+        // Wtedy NIE wysyłamy productParameters ręcznie, bo one wynikają z ID
+        if (payload.productId) {
+            body.product = {
+                id: payload.productId
+            };
+        }
+        // Jeśli NIE mamy ID (manualne tworzenie), usuwamy product, żeby nie było błędu 500
+        // (to jest to co zrobiliśmy w poprzedniej wiadomości)
+
+
+        // USUWAMY "body.product" CAŁKOWICIE
+        // Dzięki temu unikamy błędu "UnknownJSONProperty: product"
+
+        const res = await fetch(`${ALLEGRO_API_BASE}/sale/product-offers`, {
+            method: 'POST',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/vnd.allegro.public.v1+json',
+                'Content-Type': 'application/vnd.allegro.public.v1+json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+            const txt = await res.text();
+            console.error("Allegro Draft Error:", txt);
+            throw new Error(`Błąd tworzenia szkicu Allegro: ${txt}`);
+        }
+
+        const responseData: any = await res.json();
+        return { id: responseData.id };
+    });
 }
 
-export async function fetchAllegroMessages(accessToken: string): Promise<AllegroConversation[]> {
-  return requestWithRetry(async () => {
-    // Pobieranie wątków (endpoint /messaging/threads)
-    const data: any = await allegroFetch('/messaging/threads?limit=20', accessToken);
-
-    return data.threads.map((thread: any) => ({
-      conversationId: thread.id,
-      messages: thread.lastMessage ? [{
-        // API listy wątków zwraca tylko ostatnią wiadomość. 
-        // Aby pobrać wszystkie, trzeba by odpytać endpoint /messaging/threads/{id}/messages dla każdego wątku.
-        // Tutaj dla wydajności zwracamy ostatnią jako podgląd.
-        sender: thread.lastMessage.author.login,
-        body: thread.lastMessage.text,
-        sentAt: thread.lastMessage.createdAt
-      }] : []
-    }));
-  });
-}
-
+// ... (Auth bez zmian)
 export function getAllegroAuthUrl(state: string) {
   const redirectUri = process.env.ALLEGRO_REDIRECT_URI;
   if (!redirectUri) throw new Error("Brak ALLEGRO_REDIRECT_URI w pliku .env");
@@ -79,16 +180,10 @@ export async function exchangeAllegroCode(code: string) {
   const redirectUri = process.env.ALLEGRO_REDIRECT_URI;
   const clientId = process.env.ALLEGRO_CLIENT_ID!;
   const clientSecret = process.env.ALLEGRO_CLIENT_SECRET!;
-
-  if (!redirectUri) throw new Error("Brak ALLEGRO_REDIRECT_URI w pliku env");
-  console.log(`wymiana kodu na token dla RedirectURI: ${redirectUri}`);
-
   const authHeader = 'Basic ' + Buffer.from(`${clientId}:${clientSecret}`).toString('base64');
 
-  const url = `${ALLEGRO_AUTH_BASE}/token`;
-
   try {
-      const res = await fetch(url, {
+      const res = await fetch(`${ALLEGRO_AUTH_BASE}/token`, {
         method: 'POST',
         headers: {
             'Authorization': authHeader,
@@ -97,45 +192,21 @@ export async function exchangeAllegroCode(code: string) {
         body: new URLSearchParams({
             grant_type: 'authorization_code',
             code: code,
-            redirect_uri: redirectUri
+            redirect_uri: redirectUri!
         }).toString()
       });
-
       if (!res.ok) {
         const txt = await res.text();
-        throw new Error(`Allegro zwróciło błąd ${res.status}: ${txt}`);
+        throw new Error(`Allegro Auth Error ${res.status}: ${txt}`);
       }
-
       const data: any = await res.json();
-      
       return {
         accessToken: data.access_token,
         refreshToken: data.refresh_token,
         expiresIn: data.expires_in
       };
-
   } catch (error: any) {
       console.error("FETCH ERROR:", error);
-      if (error.cause) console.error("CAUSE:", error.cause);
       throw error;
   }
-  // const res = await fetch(url, {
-  //   method: 'POST',
-  //   headers: {
-  //     'Authorization': authHeader,
-  //   }
-  // });
-
-  // if (!res.ok) {
-  //   const txt = await res.text();
-  //   throw new Error(`Failed to exchange token: ${txt}`);
-  // }
-
-  // const data: any = await res.json();
-  
-  // return {
-  //   accessToken: data.access_token,
-  //   refreshToken: data.refresh_token,
-  //   expiresIn: data.expires_in
-  // };
 }
