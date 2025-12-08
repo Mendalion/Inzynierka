@@ -210,3 +210,62 @@ export async function exchangeAllegroCode(code: string) {
       throw error;
   }
 }
+
+export async function getAllegroOffer(accessToken: string, offerId: string) {
+    return requestWithRetry(async () => {
+        return await allegroFetch(`/sale/product-offers/${offerId}`, accessToken);
+    });
+}
+
+export async function updateAllegroOffer(accessToken: string, offerId: string, data: { title?: string, price?: number, description?: string }) {
+    console.log(`[ALLEGRO-CLIENT] Aktualizuję ofertę ${offerId}...`);
+    
+    // Budujemy payload tylko z tych pól, które się zmieniły
+    const body: any = {};
+
+    if (data.title) {
+        body.name = data.title;
+    }
+
+    if (data.price) {
+        body.sellingMode = {
+            price: {
+                amount: String(data.price),
+                currency: "PLN"
+            }
+        };
+    }
+
+    if (data.description) {
+        body.description = {
+            sections: [
+                {
+                    items: [{ type: 'TEXT', content: `<p>${data.description}</p>` }]
+                }
+            ]
+        };
+    }
+
+    // Jeśli nic nie ma do wysłania, przerywamy
+    if (Object.keys(body).length === 0) return;
+
+    return requestWithRetry(async () => {
+        const res = await fetch(`${ALLEGRO_API_BASE}/sale/product-offers/${offerId}`, {
+            method: 'PATCH',
+            headers: {
+                'Authorization': `Bearer ${accessToken}`,
+                'Accept': 'application/vnd.allegro.public.v1+json',
+                'Content-Type': 'application/vnd.allegro.public.v1+json'
+            },
+            body: JSON.stringify(body)
+        });
+
+        if (!res.ok) {
+            const txt = await res.text();
+            console.error("Allegro Update Error:", txt);
+            throw new Error(`Błąd aktualizacji Allegro: ${txt}`);
+        }
+
+        return await res.json();
+    });
+}

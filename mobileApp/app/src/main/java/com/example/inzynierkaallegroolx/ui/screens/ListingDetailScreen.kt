@@ -75,6 +75,29 @@ fun ListingDetailScreen(
                             text = listing.title,
                             style = MaterialTheme.typography.headlineMedium
                         )
+                        //
+                        //- allegor
+                        //
+                        listing.allegroDetails?.let { allegro ->
+                            Card(
+                                colors = CardDefaults.cardColors(containerColor = Color(0xFFFFE0B2)), // Lekki pomarańczowy dla Allegro
+                                modifier = Modifier.fillMaxWidth().padding(vertical = 8.dp)
+                            ) {
+                                Column(Modifier.padding(16.dp)) {
+                                    Text(
+                                        text = "Allegro (Live Data)",
+                                        style = MaterialTheme.typography.titleMedium,
+                                        color = Color(0xFFFF6F00) // Allegro Orange
+                                    )
+                                    Spacer(modifier = Modifier.height(4.dp))
+                                    Text(text = "Status: ${allegro.status}")
+                                    Text(text = "Aktualna cena: ${allegro.price} PLN")
+                                    Text(text = "Dostępne sztuki: ${allegro.stock}")
+                                    // Tutaj można dodać przycisk "Otwórz ofertę" wykorzystujący allegro.webUrl
+                                }
+                            }
+                        }
+                        //
                         Card(
                             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceVariant),
                             modifier = Modifier.fillMaxWidth()

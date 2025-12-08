@@ -6,6 +6,7 @@ import com.example.inzynierkaallegroolx.Config
 import com.example.inzynierkaallegroolx.data.AppDatabase
 import com.example.inzynierkaallegroolx.data.listings.ListingEntity
 import com.example.inzynierkaallegroolx.network.*
+import com.example.inzynierkaallegroolx.ui.model.AllegroDetailsUi
 import com.example.inzynierkaallegroolx.ui.model.ListingImageUi
 import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
 import kotlinx.coroutines.Dispatchers
@@ -73,7 +74,8 @@ class ListingsRepository(private val context: Context) {
             platforms = if (entity.platforms.isNotEmpty()) entity.platforms.split(",") else emptyList(),
             thumbnailUrl = entity.thumbnailUrl,
             description = entity.description,
-            allImages = emptyList() //tylko miniaturkę w trybie offline
+            allImages = emptyList(), //tylko miniaturkę w trybie offline
+            allegroDetails = null
         )
     }
 
@@ -124,11 +126,25 @@ class ListingsRepository(private val context: Context) {
     suspend fun fetchDetails(id: String): Result<ListingItemUi> = withContext(Dispatchers.IO) {
         return@withContext try {
             val dto = ApiClient.listings.get(id)
+
+            // Zapisz podstawowe dane do cache (Entity nie przechowuje dynamicznych danych Allegro)
             val entity = mapDtoToEntity(dto)
             listingDao.upsertAll(listOf(entity))
+
             val allImagesUi = dto.images?.map {
                 ListingImageUi(it.id, Config.imageUrl(it.url) ?: "")
             } ?: emptyList()
+
+            // Mapowanie ExternalDetails (Allegro) na UI
+            val allegroDetailsUi = dto.externalDetails?.allegro?.let { allegroDto ->
+                AllegroDetailsUi(
+                    id = allegroDto.id,
+                    status = allegroDto.status,
+                    price = allegroDto.price,
+                    stock = allegroDto.stock,
+                    webUrl = allegroDto.webUrl
+                )
+            }
 
             val uiModel = ListingItemUi(
                 id = dto.id,
@@ -138,7 +154,8 @@ class ListingsRepository(private val context: Context) {
                 platforms = dto.platformStates?.map { it.platform } ?: emptyList(),
                 thumbnailUrl = entity.thumbnailUrl,
                 description = dto.description ?: "",
-                allImages = allImagesUi
+                allImages = allImagesUi,
+                allegroDetails = allegroDetailsUi // Przekazujemy zmapowane dane lub null
             )
             Result.success(uiModel)
         } catch (e: Exception) {

@@ -3,7 +3,7 @@ import { authMiddleware } from '../auth/auth.middleware.js';
 import { prisma } from '../../db/prisma.js';
 import { Platform, Prisma, ListingStatus } from '@prisma/client'; 
 import { toListingDTO } from './listings.mapper.js';
-import { createAllegroDraft, fetchCategoryParameters } from '../integrations/allegro.client.js';
+import { createAllegroDraft, fetchCategoryParameters, getAllegroOffer, updateAllegroOffer } from '../integrations/allegro.client.js';
 import { z } from 'zod';
 
 const router = Router();
@@ -176,10 +176,51 @@ router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const id = req.params.id;
-    const listing = await prisma.listing.findUnique({ where: { id }, include: { images: true, platformStates: true } });
+    
+    // 1. Pobierz lokalne dane
+    const listing = await prisma.listing.findUnique({ 
+        where: { id }, 
+        include: { images: true, platformStates: true } 
+    });
+    
     if (!listing) return res.status(404).json({ error: 'NOT_FOUND' });
     if (listing.userId !== userId) return res.status(403).json({ error: 'FORBIDDEN' });
-    res.json(toListingDTO(listing));
+
+    const responseDTO = toListingDTO(listing);
+
+    // 2. Sprawdź czy jest powiązane z Allegro
+    const allegroState = listing.platformStates.find(ps => ps.platform === 'ALLEGRO' && ps.platformListingId && !ps.platformListingId.startsWith('PENDING'));
+
+    if (allegroState) {
+        try {
+            // Pobierz token użytkownika
+            const integration = await prisma.userIntegration.findFirst({
+                where: { userId, platform: 'ALLEGRO' }
+            });
+
+            if (integration && integration.accessToken) {
+                // 3. Pobierz "żywe" dane z Allegro
+                const allegroData: any = await getAllegroOffer(integration.accessToken, allegroState.platformListingId);
+                
+                // 4. Dołącz do odpowiedzi
+                responseDTO.externalDetails = {
+                    allegro: {
+                        id: allegroData.id,
+                        status: allegroData.publication.status, // np. ACTIVE, ENDED
+                        price: allegroData.sellingMode.price.amount,
+                        stock: allegroData.stock.available,
+                        // Link do oferty w Sandboxie (lub produkcji)
+                        webUrl: `https://allegro.pl.allegrosandbox.pl/oferta/${allegroData.id}` 
+                    }
+                };
+            }
+        } catch (err) {
+            console.error("Błąd pobierania danych live z Allegro:", err);
+            // Nie przerywamy requestu, po prostu nie dodajemy externalDetails
+        }
+    }
+
+    res.json(responseDTO);
   } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
@@ -187,16 +228,59 @@ router.patch('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const id = req.params.id;
-    const listing = await prisma.listing.findUnique({ where: { id } });
+
+    // 1. Pobieramy ogłoszenie PRZED zmianami, żeby sprawdzić powiązania
+    const listing = await prisma.listing.findUnique({ 
+        where: { id },
+        include: { platformStates: true } // Ważne: pobierz stany platform
+    });
+
     if (!listing) return res.status(404).json({ error: 'NOT_FOUND' });
     if (listing.userId !== userId) return res.status(403).json({ error: 'FORBIDDEN' });
+
+    // 2. Walidacja danych przychodzących
     const data = updateSchema.parse(req.body);
     const updateData: any = { ...data };
     if (data.price) updateData.price = new Prisma.Decimal(data.price); 
+
+    // 3. --- LOGIKA ALLEGRO START ---
+    // Sprawdzamy czy oferta jest wystawiona na Allegro
+    const allegroState = listing.platformStates.find(ps => ps.platform === 'ALLEGRO' && ps.platformListingId && !ps.platformListingId.startsWith('PENDING'));
+
+    if (allegroState) {
+        try {
+            const integration = await prisma.userIntegration.findFirst({
+                where: { userId, platform: 'ALLEGRO' }
+            });
+
+            if (integration && integration.accessToken) {
+                // Wysyłamy zmiany do Allegro
+                await updateAllegroOffer(integration.accessToken, allegroState.platformListingId, {
+                    title: data.title,
+                    price: data.price,
+                    description: data.description
+                });
+                console.log("Zaktualizowano ofertę na Allegro:", allegroState.platformListingId);
+            }
+        } catch (allegroError) {
+            console.error("Nie udało się zaktualizować Allegro:", allegroError);
+            // Opcjonalnie: możesz rzucić błąd, jeśli chcesz zablokować zmianę lokalną, 
+            // ale zazwyczaj lepiej pozwolić na zmianę lokalną i tylko zalogować błąd API.
+        }
+    }
+    // --- LOGIKA ALLEGRO KONIEC ---
+
+    // 4. Aktualizacja w lokalnej bazie (tak jak było wcześniej)
     await prisma.listing.update({ where: { id }, data: updateData });
+    
+    // 5. Zwracamy zaktualizowany obiekt
     const updated = await prisma.listing.findUnique({ where: { id }, include: { images: true, platformStates: true } });
     res.json(toListingDTO(updated));
-  } catch (e: any) { res.status(400).json({ error: e.message }); }
+
+  } catch (e: any) { 
+      console.error(e);
+      res.status(400).json({ error: e.message }); 
+  }
 });
 
 router.delete('/:id', authMiddleware, async (req, res) => {

@@ -10,7 +10,20 @@ data class ListingDto(
     val price: String?,
     val status: String?,
     val platformStates: List<PlatformStateDto>?,
-    val images: List<ListingImageDto>?
+    val images: List<ListingImageDto>?,
+    val externalDetails: ExternalDetailsDto? = null
+)
+
+data class ExternalDetailsDto(
+    val allegro: AllegroExternalDto?
+)
+
+data class AllegroExternalDto(
+    val id: String,
+    val status: String,
+    val price: String,
+    val stock: Int,
+    val webUrl: String
 )
 
 data class PlatformStateDto(
