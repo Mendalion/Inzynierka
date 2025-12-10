@@ -217,7 +217,7 @@ export async function getAllegroOffer(accessToken: string, offerId: string) {
     });
 }
 
-export async function updateAllegroOffer(accessToken: string, offerId: string, data: { title?: string, price?: number, description?: string }) {
+export async function updateAllegroOffer(accessToken: string, offerId: string, data: { title?: string, price?: number, description?: string, images?: { url: string }[], attributes?: any}) {
     console.log(`[ALLEGRO-CLIENT] Aktualizuję ofertę ${offerId}...`);
     
     // Budujemy payload tylko z tych pól, które się zmieniły
@@ -246,6 +246,31 @@ export async function updateAllegroOffer(accessToken: string, offerId: string, d
         };
     }
 
+    if (data.images) {
+        body.images = data.images.map(img => ({ url: img.url }));
+    }
+
+    if (data.attributes) {
+        const params: any[] = [];
+        Object.entries(data.attributes).forEach(([key, value]) => {
+            // Zakładamy uproszczenie: jeśli wartość to string, to valuesIds (słownik) lub values (tekst)
+            // W pełnej implementacji powinieneś sprawdzać typ parametru z definicji kategorii
+            const valStr = String(value);
+            // Heurystyka: jeśli same cyfry/UUID to pewnie ID słownika, jeśli tekst to value
+            // Dla bezpieczeństwa w MVP wysyłamy jako valuesIds (dla słowników) ORAZ values
+            // (Allegro zignoruje niepasujące pole, ale to brudne rozwiązanie. 
+            //  Lepiej byłoby mieć typ parametru w bazie).
+            params.push({
+                id: key,
+                valuesIds: [valStr], 
+                values: [valStr] 
+            });
+        });
+        if (params.length > 0) {
+            body.parameters = params;
+        }
+    }
+
     // Jeśli nic nie ma do wysłania, przerywamy
     if (Object.keys(body).length === 0) return;
 
@@ -267,5 +292,12 @@ export async function updateAllegroOffer(accessToken: string, offerId: string, d
         }
 
         return await res.json();
+    });
+}
+
+export async function getMyAllegroOffers(accessToken: string) {
+    return requestWithRetry(async () => {
+        const res = await allegroFetch(`/sale/offers?limit=100&publication.status=ACTIVE&publication.status=INACTIVE`, accessToken);
+        return res.offers || [];
     });
 }

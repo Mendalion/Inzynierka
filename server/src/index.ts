@@ -16,7 +16,7 @@ async function main() {
   app.use('/uploads', express.static('uploads'));
   
   app.listen(Number(env.PORT), () => {
-    console.log(`🚀 API listening on port ${env.PORT}`);
+    console.log(`API listening on port ${env.PORT}`);
   });
 
   //Cron: Synchronizacja (co 15 minut)

@@ -21,6 +21,8 @@ data class ListingsState(
     val error: String? = null,
     val searchQuery: String = "",
     val filterPlatform: String = "ALL",
+    val isImporting: Boolean = false,//import ogloszen
+    val importMessage: String? = null,//import ogloszen
     val sortOption: SortOption = SortOption.TITLE_ASC
 )
 
@@ -62,6 +64,30 @@ class ListingsViewModel(app: Application) : AndroidViewModel(app) {
     fun onSortChange(option: SortOption) {
         _state.value = _state.value.copy(sortOption = option)
         applyFilters(_state.value.listings)
+    }
+
+    fun importAllegro() {
+        viewModelScope.launch {
+            _state.value = _state.value.copy(isImporting = true, error = null, importMessage = null)
+            try {
+                val result = repository.importFromAllegro()
+                result.onSuccess { data ->
+                    _state.value = _state.value.copy(
+                        isImporting = false,
+                        importMessage = "Zaimportowano: ${data.imported}, Zaktualizowano: ${data.updated}"
+                    )
+                    loadListings() // Odśwież widok
+                }.onFailure { e ->
+                    _state.value = _state.value.copy(isImporting = false, error = "Błąd importu: ${e.message}")
+                }
+            } catch (e: Exception) {
+                _state.value = _state.value.copy(isImporting = false, error = "Błąd: ${e.message}")
+            }
+        }
+    }
+
+    fun clearImportMessage() {
+        _state.value = _state.value.copy(importMessage = null)
     }
 
     private fun applyFilters(currentListings: List<ListingItemUi>) {

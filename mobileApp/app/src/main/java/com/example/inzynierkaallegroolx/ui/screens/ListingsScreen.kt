@@ -1,3 +1,4 @@
+import android.widget.Toast
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -5,6 +6,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CloudDownload
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Search
@@ -15,6 +17,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.Lifecycle
@@ -29,10 +32,13 @@ import com.example.inzynierkaallegroolx.ui.model.ListingItemUi
 import com.example.inzynierkaallegroolx.viewmodel.ListingsViewModel
 import com.example.inzynierkaallegroolx.viewmodel.SortOption
 
+
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewModel()) {
     val state by vm.state.collectAsState()
     val lifecycleOwner = LocalLifecycleOwner.current
+    val context = LocalContext.current
 
     DisposableEffect(lifecycleOwner) {
         val observer = LifecycleEventObserver { _, event ->
@@ -46,8 +52,34 @@ fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewMod
 
     var sortMenuExpanded by remember { mutableStateOf(false) }
 
+    // Wyświetlanie komunikatu o sukcesie
+    LaunchedEffect(state.importMessage) {
+        state.importMessage?.let { msg ->
+            Toast.makeText(context, msg, Toast.LENGTH_LONG).show()
+            vm.clearImportMessage()
+        }
+    }
+
     Scaffold(
-        topBar = { AppTopBar("Twoje Ogłoszenia", navController) },
+        topBar = {
+            TopAppBar(
+                title = { Text("Moje ogłoszenia") },
+                actions = {
+                    // PRZYCISK DO IMPORTU Z ALLEGRO
+                    IconButton(onClick = { vm.importAllegro() }) {
+                        if (state.isImporting) {
+                            CircularProgressIndicator(
+                                modifier = Modifier.size(24.dp),
+                                color = MaterialTheme.colorScheme.onPrimary,
+                                strokeWidth = 2.dp
+                            )
+                        } else {
+                            Icon(Icons.Default.CloudDownload, contentDescription = "Pobierz z Allegro")
+                        }
+                    }
+                }
+            )
+        },
         bottomBar = { AppBottomBar(navController) }
     ) { padding ->
         Column(

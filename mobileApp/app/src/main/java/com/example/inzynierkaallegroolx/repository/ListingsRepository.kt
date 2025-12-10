@@ -173,6 +173,17 @@ class ListingsRepository(private val context: Context) {
         }
     }
 
+    suspend fun importFromAllegro() = withContext(Dispatchers.IO) {
+        try {
+            val response = ApiClient.listings.importAllegroOffers()
+            // Po imporcie musimy odświeżyć listę lokalną
+            fetchAll()
+            Result.success(response)
+        } catch (e: Exception) {
+            throw normalizeError(e)
+        }
+    }
+
     suspend fun update(id: String, title: String?, description: String?, price: Double?, newPhotos: List<Uri>) = withContext(Dispatchers.IO) {
         try {
             ApiClient.listings.update(id, ListingUpdateBody(title, description, price))

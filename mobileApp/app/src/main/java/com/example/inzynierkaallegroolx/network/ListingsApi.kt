@@ -66,6 +66,12 @@ data class ListingUpdateBody(
     val price: Double? = null
 )
 
+data class ImportResponseDto(
+    val success: Boolean,
+    val imported: Int,
+    val updated: Int
+)
+
 interface ListingsApi {
     @GET("listings")
     suspend fun getListings(): List<ListingDto>
@@ -93,6 +99,9 @@ interface ListingsApi {
 
     @GET("/listings/categories/{categoryId}/parameters")
     suspend fun getCategoryParameters(@Path("categoryId") categoryId: String): List<CategoryParameterDto>
+
+    @POST("listings/import/allegro")
+    suspend fun importAllegroOffers(): ImportResponseDto
 
     @Multipart
     @POST("listings/{id}/images/upload")
