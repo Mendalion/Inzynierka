@@ -32,9 +32,12 @@ server/generated/
 server/uploads/
 server/.prisma/
 
+#info
+info/
 
 #MOBILE
 .gradle/
+mobileapp/.gradle/
 !gradle/wrapper/gradle-wrapper.jar
 
 #Konfiguracja lokalna
