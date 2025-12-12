@@ -76,7 +76,7 @@ object ApiClient {
         .add(KotlinJsonAdapterFactory())
         .build()
 
-    // Client that attaches Authorization header when available
+    //Klient z autoryzacją w headerze
     private val authedClient = OkHttpClient.Builder()
         .addInterceptor(logging)
         .addInterceptor(Interceptor { chain ->
@@ -87,7 +87,7 @@ object ApiClient {
         })
         .build()
 
-    // Client without Authorization header (for login/register/refresh/biometric)
+    //Klient bez autoryzacji w headerze login/register/refresh/biometric
     private val publicClient = OkHttpClient.Builder()
         .addInterceptor(logging)
         .build()

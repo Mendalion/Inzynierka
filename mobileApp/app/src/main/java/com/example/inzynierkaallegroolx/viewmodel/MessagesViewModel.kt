@@ -34,19 +34,15 @@ class MessagesViewModel(app: Application) : AndroidViewModel(app) {
     private val _chatState = MutableStateFlow(ChatState())
     val chatState: StateFlow<ChatState> = _chatState.asStateFlow()
 
-    //ładowanie listy konwersacji
     fun loadConversations() {
         viewModelScope.launch {
             _conversationsState.value = _conversationsState.value.copy(isLoading = true)
 
-            //ładujemy dane z bazy
             val localItems = repo.getConversations()
             _conversationsState.value = ConversationsState(items = localItems, isLoading = true)
 
-            //próbujemy zsynchronizować z serwerem
             val result = repo.syncConversations()
 
-            //odswieżamy liste z bazy po synchronizacji
             val updatedItems = repo.getConversations()
 
             _conversationsState.value = ConversationsState(
@@ -57,19 +53,15 @@ class MessagesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    //konkretna rozmowa
     fun enterConversation(id: String) {
         viewModelScope.launch {
             _chatState.value = ChatState(conversationId = id, isLoading = true)
 
-            //ładujemy lokalne wiadomości
             val localMsgs = repo.getMessages(id)
             _chatState.value = _chatState.value.copy(messages = localMsgs)
 
-            //synchronizujemy szczegóły
             val result = repo.syncConversation(id)
 
-            //odswieżamy
             val updatedMsgs = repo.getMessages(id)
             _chatState.value = _chatState.value.copy(
                 messages = updatedMsgs,
@@ -79,7 +71,6 @@ class MessagesViewModel(app: Application) : AndroidViewModel(app) {
         }
     }
 
-    //wysyłanie wiadomości
     fun sendMessage(body: String) {
         val currentId = _chatState.value.conversationId ?: return
         if (body.isBlank()) return
@@ -90,7 +81,6 @@ class MessagesViewModel(app: Application) : AndroidViewModel(app) {
             val result = repo.reply(currentId, body)
 
             if (result.isSuccess) {
-                //odświeżamy listę wiadomości z bazy
                 val updatedMsgs = repo.getMessages(currentId)
                 _chatState.value = _chatState.value.copy(
                     messages = updatedMsgs,

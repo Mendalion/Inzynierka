@@ -93,7 +93,6 @@ fun ListingDetailScreen(
                                     Text(text = "Status: ${allegro.status}")
                                     Text(text = "Aktualna cena: ${allegro.price} PLN")
                                     Text(text = "Dostępne sztuki: ${allegro.stock}")
-                                    // Tutaj można dodać przycisk "Otwórz ofertę" wykorzystujący allegro.webUrl
                                 }
                             }
                         }

@@ -9,6 +9,7 @@ data class ListingDto(
     val description: String?,
     val price: String?,
     val status: String?,
+    val categoryId: String?,
     val platformStates: List<PlatformStateDto>?,
     val images: List<ListingImageDto>?,
     val externalDetails: ExternalDetailsDto? = null
@@ -30,19 +31,22 @@ data class PlatformStateDto(
     val platform: String,
     val status: String
 )
+//klasa do wysyłania zdjec w patch na allegro
+data class ListingImagePayload(
+    val url: String
+)
 
 data class ListingImageDto(
     val id: String,
     val url: String
 )
 
-// --- ZMIANA TUTAJ ---
 data class ListingCreateBody(
     val title: String,
     val description: String,
     val price: Double,
     val categoryId: String,
-    val platform: String, // Było: val platforms: List<String>
+    val platform: String,
     val parameterValues: Map<String, String>
 )
 
@@ -63,7 +67,8 @@ data class DictionaryItemDto(
 data class ListingUpdateBody(
     val title: String? = null,
     val description: String? = null,
-    val price: Double? = null
+    val price: Double? = null,
+    val images: List<ListingImagePayload>? = null
 )
 
 data class ImportResponseDto(

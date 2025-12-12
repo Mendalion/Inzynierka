@@ -57,7 +57,6 @@ fun ListingAddScreen(
                 .verticalScroll(scrollState)
                 .padding(16.dp)
         ) {
-            // --- PODSTAWY ---
             OutlinedTextField(
                 value = state.title,
                 onValueChange = { vm.onTitleChange(it) },
@@ -75,7 +74,7 @@ fun ListingAddScreen(
             )
             Spacer(modifier = Modifier.height(12.dp))
 
-            // --- KATEGORIA ---
+            //KATEGORIA
             Row(verticalAlignment = Alignment.CenterVertically) {
                 OutlinedTextField(
                     value = state.category,
@@ -94,7 +93,7 @@ fun ListingAddScreen(
                 }
             }
 
-            // --- DYNAMICZNE POLA ---
+            //DYNAMICZNE POLA
             if (state.dynamicFields.isNotEmpty()) {
                 Spacer(modifier = Modifier.height(16.dp))
                 Text("Parametry (Wymagane)", style = MaterialTheme.typography.titleSmall)
@@ -129,7 +128,6 @@ fun ListingAddScreen(
                             }
                         }
                     } else {
-                        // Zwykłe pole tekstowe
                         OutlinedTextField(
                             value = value,
                             onValueChange = { vm.onParameterChange(field.id, it) },
@@ -148,7 +146,6 @@ fun ListingAddScreen(
                 modifier = Modifier.fillMaxWidth().height(100.dp)
             )
 
-            // --- ZDJĘCIA ---
             Spacer(modifier = Modifier.height(16.dp))
             Button(onClick = { photoPickerLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly)) }) {
                 Icon(Icons.Default.AddAPhoto, null)
@@ -159,7 +156,7 @@ fun ListingAddScreen(
                 Text("Wybrano zdjęć: ${state.selectedPhotos.size}")
             }
 
-            // --- PLATFORMY ---
+            //PLATFORMY
             Spacer(modifier = Modifier.height(16.dp))
             Text("Wybierz platformę:", style = MaterialTheme.typography.titleSmall)
             Row(verticalAlignment = Alignment.CenterVertically) {

@@ -20,7 +20,6 @@ data class ListingAddState(
 
     val selectedPhotos: List<Uri> = emptyList(),
 
-    // Pola dynamiczne
     val dynamicFields: List<CategoryParameterDto> = emptyList(),
     val parameterValues: Map<String, String> = emptyMap(),
     val isLoadingParams: Boolean = false,

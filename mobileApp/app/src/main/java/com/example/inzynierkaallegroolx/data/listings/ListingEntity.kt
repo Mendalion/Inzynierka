@@ -10,6 +10,7 @@ data class ListingEntity(
     val description: String,
     val price: String,
     val status: String,
+    val categoryId: String? = null,
     val archivedAt: String? = null,
     val thumbnailUrl: String? = null,
     val platforms: String = "",

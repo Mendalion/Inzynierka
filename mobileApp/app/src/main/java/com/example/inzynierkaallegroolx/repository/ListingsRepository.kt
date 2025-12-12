@@ -28,34 +28,31 @@ class ListingsRepository(private val context: Context) {
         return ApiClient.listings.getCategoryParameters(categoryId)
     }
 
-    // --- ZMIANA W PARAMETRACH FUNKCJI ---
     suspend fun createListing(
         title: String,
         description: String,
         price: Double,
-        platform: String, // Było: platforms: List<String>
+        platform: String,
         photos: List<Uri>,
         categoryId: String,
         parameterValues: Map<String, String>
     ) = withContext(Dispatchers.IO) {
         try {
-            // 1. Tworzymy ogłoszenie
+            //tworzymy ogłoszenie
             val body = ListingCreateBody(
                 title = title,
                 description = description,
                 price = price,
-                platform = platform, // Przekazujemy pojedynczy string
+                platform = platform,
                 categoryId = categoryId,
                 parameterValues = parameterValues
             )
             val createdDto = ApiClient.listings.create(body)
 
-            // 2. Upload zdjęć
             if (photos.isNotEmpty()) {
                 uploadPhotos(createdDto.id, photos)
             }
 
-            // 3. Zapisz do lokalnej bazy
             val entity = mapDtoToEntity(createdDto)
             listingDao.upsertAll(listOf(entity))
 
@@ -71,6 +68,7 @@ class ListingsRepository(private val context: Context) {
             title = entity.title,
             price = entity.price,
             status = entity.status,
+            categoryId = entity.categoryId,
             platforms = if (entity.platforms.isNotEmpty()) entity.platforms.split(",") else emptyList(),
             thumbnailUrl = entity.thumbnailUrl,
             description = entity.description,
@@ -80,10 +78,6 @@ class ListingsRepository(private val context: Context) {
     }
 
     private fun mapDtoToEntity(dto: ListingDto): ListingEntity {
-        // Backend teraz zwraca jedną platformę, ale w bazie lokalnej Entity może nadal mieć pole `platforms` jako string
-        // więc musimy to jakoś zmapować. ListingDto ma pole `platformStates`?
-        // Jeśli backend zwraca platformStates (lista), to ten kod zadziała.
-        // Jeśli nie, to musisz dostosować backendowe DTO. Zakładam, że DTO zostaje po staremu w kwestii odczytu.
         val platformsStr = dto.platformStates?.joinToString(",") { it.platform } ?: ""
         val rawUrl = dto.images?.firstOrNull()?.url
         val thumb = Config.imageUrl(rawUrl)
@@ -94,12 +88,11 @@ class ListingsRepository(private val context: Context) {
             description = dto.description ?: "",
             price = dto.price ?: "0.00",
             status = dto.status ?: "UNKNOWN",
+            categoryId = dto.categoryId,
             thumbnailUrl = thumb,
             platforms = platformsStr
         )
     }
-
-    // ... Reszta metod (fetchAll, fetchDetails, update, delete, etc.) BEZ ZMIAN ...
 
     suspend fun fetchAll(): Result<List<ListingItemUi>> = withContext(Dispatchers.IO) {
         return@withContext try {
@@ -127,7 +120,7 @@ class ListingsRepository(private val context: Context) {
         return@withContext try {
             val dto = ApiClient.listings.get(id)
 
-            // Zapisz podstawowe dane do cache (Entity nie przechowuje dynamicznych danych Allegro)
+            //zapis podstawowych danych do cache, Entity nie przechowuje dynamicznych danych Allegro
             val entity = mapDtoToEntity(dto)
             listingDao.upsertAll(listOf(entity))
 
@@ -135,7 +128,6 @@ class ListingsRepository(private val context: Context) {
                 ListingImageUi(it.id, Config.imageUrl(it.url) ?: "")
             } ?: emptyList()
 
-            // Mapowanie ExternalDetails (Allegro) na UI
             val allegroDetailsUi = dto.externalDetails?.allegro?.let { allegroDto ->
                 AllegroDetailsUi(
                     id = allegroDto.id,
@@ -151,11 +143,12 @@ class ListingsRepository(private val context: Context) {
                 title = dto.title,
                 price = dto.price ?: "0.00",
                 status = dto.status ?: "UNKNOWN",
+                categoryId = dto.categoryId,
                 platforms = dto.platformStates?.map { it.platform } ?: emptyList(),
                 thumbnailUrl = entity.thumbnailUrl,
                 description = dto.description ?: "",
                 allImages = allImagesUi,
-                allegroDetails = allegroDetailsUi // Przekazujemy zmapowane dane lub null
+                allegroDetails = allegroDetailsUi
             )
             Result.success(uiModel)
         } catch (e: Exception) {
@@ -184,12 +177,39 @@ class ListingsRepository(private val context: Context) {
         }
     }
 
-    suspend fun update(id: String, title: String?, description: String?, price: Double?, newPhotos: List<Uri>) = withContext(Dispatchers.IO) {
+    suspend fun update(
+        id: String,
+        title: String?,
+        description: String?,
+        price: Double?,
+        currentImages: List<ListingImageUi>,
+        newPhotos: List<Uri>
+    ) = withContext(Dispatchers.IO) {
         try {
-            ApiClient.listings.update(id, ListingUpdateBody(title, description, price))
-            if (newPhotos.isNotEmpty()) {
-                uploadPhotos(id, newPhotos)
+            val uploadedImageDtos = if (newPhotos.isNotEmpty()) {
+                uploadPhotosAndReturn(id, newPhotos)
+            } else {
+                emptyList()
             }
+            val allImagePayloads = mutableListOf<ListingImagePayload>()
+
+            currentImages.forEach {
+                allImagePayloads.add(ListingImagePayload(it.url))
+            }
+
+            uploadedImageDtos.forEach {
+                allImagePayloads.add(ListingImagePayload(it.url))
+            }
+
+            val body = ListingUpdateBody(
+                title = title,
+                description = description,
+                price = price,
+                images = allImagePayloads
+            )
+
+            ApiClient.listings.update(id, body)
+
             fetchDetails(id)
         } catch (e: Exception) {
             throw normalizeError(e)
@@ -214,7 +234,8 @@ class ListingsRepository(private val context: Context) {
         }
     }
 
-    private suspend fun uploadPhotos(listingId: String, uris: List<Uri>) {
+    private suspend fun uploadPhotosAndReturn(listingId: String, uris: List<Uri>): List<ListingImageDto> {
+        val uploaded = mutableListOf<ListingImageDto>()
         val contentResolver = context.contentResolver
         uris.forEach { uri ->
             try {
@@ -227,10 +248,18 @@ class ListingsRepository(private val context: Context) {
 
                 val requestFile = tempFile.asRequestBody("image/jpeg".toMediaTypeOrNull())
                 val body = MultipartBody.Part.createFormData("file", tempFile.name, requestFile)
-                ApiClient.listings.uploadImage(listingId, body)
+
+                val response = ApiClient.listings.uploadImage(listingId, body)
+                uploaded.add(response)
+
                 tempFile.delete()
             } catch (e: Exception) { e.printStackTrace() }
         }
+        return uploaded
+    }
+
+    private suspend fun uploadPhotos(listingId: String, uris: List<Uri>) {
+        uploadPhotosAndReturn(listingId, uris)
     }
 
     private fun isNetworkError(e: Throwable): Boolean {

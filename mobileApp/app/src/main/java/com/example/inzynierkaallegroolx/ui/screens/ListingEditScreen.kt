@@ -102,7 +102,6 @@ fun ListingEditScreen(
                         .height(100.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    // Przycisk "Dodaj"
                     Box(
                         modifier = Modifier
                             .size(80.dp)

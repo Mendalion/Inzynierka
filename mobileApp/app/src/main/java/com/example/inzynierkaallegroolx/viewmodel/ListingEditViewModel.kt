@@ -26,10 +26,8 @@ data class ListingEditState(
 
 class ListingEditViewModel(app: Application, savedStateHandle: SavedStateHandle) : AndroidViewModel(app) {
 
-    //inicjalizacja repozytorium z contextem aplikacji
     private val repository = ListingsRepository(app)
 
-    //pobranie id z argumentów nawigacji
     private val listingId: String = checkNotNull(savedStateHandle["id"])
 
     private val _state = MutableStateFlow(ListingEditState())
@@ -49,7 +47,7 @@ class ListingEditViewModel(app: Application, savedStateHandle: SavedStateHandle)
                     title = item.title,
                     description = item.description,
                     price = item.price,
-                    serverImages = item.allImages, // To są obiekty ListingImageUi
+                    serverImages = item.allImages,
                     isLoading = false
                 )
             }.onFailure {
@@ -58,18 +56,16 @@ class ListingEditViewModel(app: Application, savedStateHandle: SavedStateHandle)
         }
     }
 
-    //obsługa pól tekstowych
     fun onTitleChange(v: String) { _state.value = _state.value.copy(title = v) }
     fun onDescChange(v: String) { _state.value = _state.value.copy(description = v) }
     fun onCategoryChange(v: String) { _state.value = _state.value.copy(category = v) }
     fun onPriceChange(v: String) {
-        //walidacja kwoty
+
         if (v.all { it.isDigit() || it == '.' || it == ',' }) {
             _state.value = _state.value.copy(price = v)
         }
     }
 
-    //dodawanie nowych zdjęc
     fun addPhotos(uris: List<Uri>) {
         val current = _state.value.newLocalImages.toMutableList()
         current.addAll(uris)
@@ -104,7 +100,14 @@ class ListingEditViewModel(app: Application, savedStateHandle: SavedStateHandle)
         viewModelScope.launch {
             _state.value = s.copy(isLoading = true, error = null)
             try {
-                repository.update(s.id, s.title, s.description, priceDouble, s.newLocalImages)
+                repository.update(
+                    s.id,
+                    s.title,
+                    s.description,
+                    priceDouble,
+                    s.serverImages,
+                    s.newLocalImages
+                )
                 _state.value = s.copy(isLoading = false, isSuccess = true)
             } catch (e: Exception) {
                 _state.value = s.copy(isLoading = false, error = "Błąd zapisu: ${e.message}")

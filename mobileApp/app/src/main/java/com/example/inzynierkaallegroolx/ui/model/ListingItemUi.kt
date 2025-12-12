@@ -18,10 +18,10 @@ data class ListingItemUi(
     val title: String,
     val price: String,
     val status: String,
+    val categoryId: String? = null,
     val platforms: List<String>,
     val thumbnailUrl: String? = null,
     val description: String = "",
     val allImages: List<ListingImageUi> = emptyList(),
-    // Nowe pole na dane szczegółowe (nullable, bo nie zawsze są)
     val allegroDetails: AllegroDetailsUi? = null
 )

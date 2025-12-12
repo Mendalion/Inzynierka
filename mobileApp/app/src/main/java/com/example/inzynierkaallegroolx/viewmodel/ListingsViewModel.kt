@@ -21,8 +21,8 @@ data class ListingsState(
     val error: String? = null,
     val searchQuery: String = "",
     val filterPlatform: String = "ALL",
-    val isImporting: Boolean = false,//import ogloszen
-    val importMessage: String? = null,//import ogloszen
+    val isImporting: Boolean = false,
+    val importMessage: String? = null,
     val sortOption: SortOption = SortOption.TITLE_ASC
 )
 
@@ -76,7 +76,7 @@ class ListingsViewModel(app: Application) : AndroidViewModel(app) {
                         isImporting = false,
                         importMessage = "Zaimportowano: ${data.imported}, Zaktualizowano: ${data.updated}"
                     )
-                    loadListings() // Odśwież widok
+                    loadListings()
                 }.onFailure { e ->
                     _state.value = _state.value.copy(isImporting = false, error = "Błąd importu: ${e.message}")
                 }
