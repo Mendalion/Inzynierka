@@ -7,10 +7,17 @@ import cron from 'node-cron';
 import { prisma } from './db/prisma.js';
 import { syncListings, syncMessages } from './modules/integrations/sync.service.js';
 import { rotateKey } from './modules/auth/keys.service.js';
+import { execSync } from 'child_process';
 
 async function main() {
   await initDb();
-  
+  try {
+    execSync('npx prisma db push', { stdio: 'inherit' });
+  } catch (err) {
+    console.error( err);
+  }
+
+
   const app = createApp();
   
   app.use('/uploads', express.static('uploads'));
