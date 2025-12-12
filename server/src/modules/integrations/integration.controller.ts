@@ -41,7 +41,7 @@ router.get('/allegro/products', authMiddleware, async (req, res) => {
             name: p.name,
             categoryId: p.category.id,
             images: p.images.map((img: any) => img.url),
-            parameters: p.parameters // To są te parametry produktowe, których brakowało!
+            parameters: p.parameters
         }));
 
         res.json(result);

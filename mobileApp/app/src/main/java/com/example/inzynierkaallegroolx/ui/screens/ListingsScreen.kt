@@ -118,9 +118,9 @@ fun ListingsScreen(navController: NavController, vm: ListingsViewModel = viewMod
                         label = { Text("Allegro") }
                     )
                     FilterChip(
-                        selected = state.filterPlatform == "OLX",
-                        onClick = { vm.onFilterChange("OLX") },
-                        label = { Text("OLX") }
+                        selected = state.filterPlatform == "EBAY",
+                        onClick = { vm.onFilterChange("EBAY") },
+                        label = { Text("EBAY") }
                     )
                 }
                 Box {

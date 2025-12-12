@@ -96,7 +96,7 @@ class ListingsViewModel(app: Application) : AndroidViewModel(app) {
             val matchesSearch = listing.title.contains(s.searchQuery, ignoreCase = true)
             val matchesPlatform = when (s.filterPlatform) {
                 "ALLEGRO" -> listing.platforms.any { it.equals("ALLEGRO", ignoreCase = true) }
-                "OLX" -> listing.platforms.any { it.equals("OLX", ignoreCase = true) }
+                "EBAY" -> listing.platforms.any { it.equals("EBAY", ignoreCase = true) }
                 else -> true
             }
             matchesSearch && matchesPlatform

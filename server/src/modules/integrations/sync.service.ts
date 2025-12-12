@@ -1,7 +1,6 @@
 // Sync service stub for listings & messages
 import { prisma } from '../../db/prisma.js';
 // import { fetchAllegroListings, fetchAllegroMessages } from './allegro.client.js';
-import { fetchOlxListings, fetchOlxMessages } from './olx.client.js';
 
 export async function syncListings(userId: string) {
   const integrations = await prisma.userIntegration.findMany({ where: { userId } });

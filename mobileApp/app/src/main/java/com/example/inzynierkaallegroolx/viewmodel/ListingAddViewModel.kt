@@ -97,10 +97,6 @@ class ListingAddViewModel(app: Application) : AndroidViewModel(app) {
             return
         }
 
-//        val platformsToSend = mutableListOf<String>()
-//        if (s.platformAllegro) platformsToSend.add("ALLEGRO")
-//        if (s.platformOlx) platformsToSend.add("OLX")
-
         viewModelScope.launch {
             _state.value = s.copy(isLoading = true, error = null)
             try {
@@ -108,7 +104,6 @@ class ListingAddViewModel(app: Application) : AndroidViewModel(app) {
                     title = s.title,
                     description = s.description,
                     price = priceDouble,
-//                    platforms = platformsToSend,
                     platform = s.selectedPlatform,
                     photos = s.selectedPhotos,
                     categoryId = s.category.ifBlank { "2" },

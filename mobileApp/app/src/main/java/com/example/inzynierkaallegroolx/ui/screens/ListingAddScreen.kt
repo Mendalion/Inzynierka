@@ -175,14 +175,11 @@ fun ListingAddScreen(
                 Spacer(Modifier.width(24.dp))
 
                 RadioButton(
-                    // Uwaga: Jeśli w Enumie masz EBAY, użyj "EBAY". Jeśli w UI ma być OLX,
-                    // musisz to obsłużyć. Zakładam, że w Schema masz EBAY, ale w UI chcesz OLX?
-                    // Jeśli w Schema masz tylko ALLEGRO i EBAY, to tutaj musisz dać "EBAY".
                     selected = state.selectedPlatform == "EBAY",
                     onClick = { vm.selectPlatform("EBAY") }
                 )
                 Text(
-                    text = "eBay", // lub OLX, zależnie od Twojego enuma w bazie
+                    text = "eBay",
                     modifier = Modifier.clickable { vm.selectPlatform("EBAY") }
                 )
             }

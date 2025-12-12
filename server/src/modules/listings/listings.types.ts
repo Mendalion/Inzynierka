@@ -4,6 +4,7 @@ export interface ListingDTO {
   description: string;
   price: any;
   status: string;
+  categoryId?: string | null;
   images: { id: string; url: string }[];
   platformStates: { platform: string; status: string; platformListingId: string }[];
 

@@ -55,7 +55,7 @@ fun HomeScreen(navController: NavController, vm: HomeViewModel = viewModel()) {
 
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 SyncStatusCard(name = "Allegro", isSynced = true, modifier = Modifier.weight(1f))
-                SyncStatusCard(name = "OLX", isSynced = false, modifier = Modifier.weight(1f))
+                SyncStatusCard(name = "EBAY", isSynced = false, modifier = Modifier.weight(1f))
             }
 
             Spacer(modifier = Modifier.height(24.dp))

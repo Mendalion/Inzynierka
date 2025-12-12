@@ -1,19 +1,4 @@
 # Android App Skeleton
-
-Implements:
-- Auth (login) with EncryptedSharedPreferences
-- Listings fetch + display (placeholder)
-- WorkManager periodic sync stubs
-- FCM Messaging service placeholder
-- Compose navigation skeleton
-
-Next Steps:
-1. Implement message sync & templates
-2. Implement stats & reports UI
-3. Add image upload & edit listing form
-4. Integrate biometric login unlocking tokens
-5. Add proper notifications channel & rendering
-
 //zmieniłem sobie agp = "8.8.0" w libs.versions.toml
 i w build.gradle.kts
 //    compileSdk {
@@ -23,8 +8,15 @@ i w build.gradle.kts
 
 nowy sposób
 cd Inzynierka
+
+w serverze -> npx prisma migrate dev
+
 docker-compose up
 
+docker-compose stop server
+docker-compose rm -f server
+docker-compose build server
+docker-compose start server 
 
 
 git clone -b olxAllegro  https://github.com/Mendalion/Inzynierka 

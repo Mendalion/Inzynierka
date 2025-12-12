@@ -8,6 +8,7 @@ export function toListingDTO(l: any): ListingDTO {
     description: l.description,
     price: l.price,
     status: l.status,
+    categoryId: l.categoryId,
     images: l.images?.map((i: any) => ({ id: i.id, url: i.url })) || [],
     platformStates: l.platformStates?.map((ps: any) => ({ platform: ps.platform, status: ps.status, platformListingId: ps.platformListingId })) || []
   };

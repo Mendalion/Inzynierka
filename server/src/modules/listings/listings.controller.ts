@@ -12,10 +12,10 @@ const updateSchema = z.object({
     title: z.string().optional(), 
     description: z.string().optional(), 
     price: z.number().optional(),
-    parameterValues: z.record(z.any()).optional()
+    parameterValues: z.record(z.any()).optional(),
+    images: z.array(z.object({ url: z.string() })).optional()
 });
 
-// GET /listings/categories/:categoryId/parameters (bez zmian)
 router.get('/categories/:categoryId/parameters', authMiddleware, async (req, res) => {
     const userId = (req as any).userId;
     const { categoryId } = req.params;
@@ -34,7 +34,6 @@ router.get('/categories/:categoryId/parameters', authMiddleware, async (req, res
     }
 });
 
-// GET /listings (bez zmian)
 router.get('/', authMiddleware, async (req, res) => {
   const userId = (req as any).userId;
   const listings = await prisma.listing.findMany({ 
@@ -45,7 +44,6 @@ router.get('/', authMiddleware, async (req, res) => {
   res.json(listings.map(toListingDTO));
 });
 
-// POST /listings
 router.post('/', authMiddleware, async (req, res) => {
     const userId = (req as any).userId;
     const body = req.body; 
@@ -54,7 +52,7 @@ router.post('/', authMiddleware, async (req, res) => {
         let createdAllegroId: string | null = null;
         let selectedPlatform: Platform | null = null;
 
-        // Jeśli frontend przysłał productId (bo znalazł po EAN), używamy go
+        //Jesli frontend przysłał productId (bo znalazł po EAN), używamy go
         const productIdFromFrontend = body.productId || null;
 
         // Wybór platformy
@@ -71,18 +69,19 @@ router.post('/', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: "Wymagana jest poprawna platforma (np. ALLEGRO)" });
         }
 
-        // --- Logika dla ALLEGRO ---
+        const imagesPayload = body.images || body.photos || [];
+        const formattedImages = imagesPayload.map((img: any) => ({ url: img.url || img }));
+
         if (selectedPlatform === Platform.ALLEGRO) {
              const integration = await prisma.userIntegration.findFirst({
                 where: { userId, platform: 'ALLEGRO' }
             });
             
             if (integration) {
-                // A. Pobieramy definicje parametrów
                 const paramDefs = await fetchCategoryParameters(integration.accessToken, body.categoryId);
 
                 const offerParams: any[] = [];
-                // UWAGA: Nie zbieramy productParams, bo API ich nie przyjmie bez ID produktu
+                //nie zbieramy productParams, bo API ich nie przyjmie bez ID produktu
 
                 if (body.parameterValues) {
                     Object.entries(body.parameterValues).forEach(([paramId, value]) => {
@@ -99,22 +98,18 @@ router.post('/', authMiddleware, async (req, res) => {
                             values: isDictionary ? [] : [valStr]
                         };
 
-                        // === FILTRACJA (KLUCZ DO SUKCESU) ===
-                        // Sprawdzamy, czy to parametr produktu (używając struktury z JSONa)
                         const isProductParam = def.options?.describesProduct === true;
                         
                         if (isProductParam) {
-                            // SKIP: Ignorujemy parametry produktu (Płeć, EAN), aby uniknąć błędu 500
-                            // Ponieważ nie mamy ID produktu, nie możemy ich wysłać.
-                            // console.log(`Skipping product param: ${def.name} (${paramId})`);
+                            // SKIP: Ignorujemy parametry produktu EAN aby uniknąć błędu 500
+                            // poniewaz nie mamy ID produktu, nie możemy ich wysłać.
                         } else {
-                            // ADD: To jest parametr oferty (np. Stan), wysyłamy go!
                             offerParams.push(paramObj);
                         }
                     });
                 }
 
-                // B. Wysyłka do API Allegro (TYLKO parametry oferty)
+                //tylko parametry oferty
                 const draft = await createAllegroDraft(integration.accessToken, {
                     title: body.title,
                     description: body.description,
@@ -127,8 +122,9 @@ router.post('/', authMiddleware, async (req, res) => {
                         countryCode: "PL"
                     },
                     offerParameters: offerParams,
-                    productId: productIdFromFrontend
+                    productId: productIdFromFrontend,
                     // Nie wysyłamy productParameters
+                    images: formattedImages
                 });
                 
                 createdAllegroId = draft.id;
@@ -136,7 +132,7 @@ router.post('/', authMiddleware, async (req, res) => {
             }
         }
 
-        // --- Zapis do bazy danych (Prisma) ---
+        //zapis do bazy danych prisma
         const priceDecimal = new Prisma.Decimal(body.price);
 
         const listing = await prisma.listing.create({
@@ -147,6 +143,7 @@ router.post('/', authMiddleware, async (req, res) => {
                 description: body.description,
                 price: priceDecimal,
                 status: ListingStatus.DRAFT,
+                categoryId: body.categoryId,
                 
                 platformStates: {
                     create: [
@@ -157,7 +154,10 @@ router.post('/', authMiddleware, async (req, res) => {
                         }
                     ]
                 },
-                attributes: body.parameterValues || {} 
+                attributes: body.parameterValues || {},
+                images: {
+                    create: formattedImages
+                }
             },
             include: {
                 platformStates: true,
@@ -172,7 +172,7 @@ router.post('/', authMiddleware, async (req, res) => {
         res.status(500).json({ error: e.message });
     }
 });
-//iportowanie ogloszen z allegro
+
 router.post('/import/allegro', authMiddleware, async (req, res) => {
     const userId = (req as any).userId;
 
@@ -185,7 +185,6 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: "Brak integracji z Allegro" });
         }
 
-        // 1. Pobierz oferty z Allegro
         const allegroOffers = await getMyAllegroOffers(integration.accessToken);
         let importedCount = 0;
         let updatedCount = 0;
@@ -193,25 +192,19 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
         for (const offer of allegroOffers) {
             const allegroId = offer.id;
             
-            // Proste parsowanie ceny
             const price = offer.sellingMode?.price?.amount || "0";
             
-            // Proste parsowanie opisu (Allegro ma sekcje, my mamy string)
-            // Zbieramy tekst z pierwszej sekcji tekstowej
-            let description = offer.name; // Fallback
+            let description = offer.name;
             if (offer.description && offer.description.sections) {
                  const textItem = offer.description.sections
                     .flatMap((s:any) => s.items)
                     .find((i:any) => i.type === 'TEXT');
-                 if (textItem) description = textItem.content; // To może być HTML
+                 if (textItem) description = textItem.content;
             }
 
-            //1.5
             const attributesJson: any = {};
             if (offer.parameters) {
                 offer.parameters.forEach((p: any) => {
-                    // Allegro zwraca valuesIds (słownik) i values (tekst/liczba)
-                    // Bierzemy pierwszy dostępny element
                     let val = null;
                     if (p.valuesIds && p.valuesIds.length > 0) val = p.valuesIds[0];
                     else if (p.values && p.values.length > 0) val = p.values[0];
@@ -226,7 +219,7 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
             if (offer.publication.status === 'ACTIVE') targetStatus = 'ACTIVE';
             else if (offer.publication.status === 'ENDED') targetStatus = 'ARCHIVED';
 
-            // 2. Sprawdź czy mamy to ogłoszenie (po ID oferty Allegro)
+            //Sprawdź czy mamy to ogłoszenie
             const existingState = await prisma.listingPlatformState.findFirst({
                 where: {
                     platform: 'ALLEGRO',
@@ -234,24 +227,25 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
                 },
                 include: { listing: true }
             });
+            
+            const categoryId = offer.category?.id || null;
 
-            // Dane wspólne do zapisu (tytuł, cena, opis, atrybuty)
             const commonData = {
                 title: offer.name,
                 price: new Prisma.Decimal(price),
-                description: description, // HTML z Allegro
-                attributes: attributesJson // <-- Tu zapisujemy pobrane atrybuty
+                description: description,
+                attributes: attributesJson,
+                categoryId: categoryId
             };
 
             if (existingState) {
-                // UPDATE
+                //UPDATE
                 await prisma.listing.update({
                     where: { id: existingState.listingId },
                     data: commonData
                 });
 
-                // --- 2. SYNCHRONIZACJA ZDJĘĆ (DELETE + CREATE) ---
-                // Usuwamy stare zdjęcia z bazy (żeby nie dublować) i dodajemy aktualne z Allegro
+                //usuwamy stare zdjęcia z bazy (żeby nie dublować) i dodajemy aktualne z Allegro
                 await prisma.listingImage.deleteMany({
                     where: { listingId: existingState.listingId }
                 });
@@ -264,7 +258,6 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
                         }))
                     });
                 }
-                
                 updatedCount++;
             } else {
                 // INSERT
@@ -272,7 +265,7 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
                     data: {
                         userId,
                         ...commonData,
-                        status: offer.publication.status === 'ACTIVE' ? 'ACTIVE' : 'DRAFT', // Poprawny status
+                        status: offer.publication.status === 'ACTIVE' ? 'ACTIVE' : 'DRAFT',
                         platformStates: {
                             create: {
                                 platform: 'ALLEGRO',
@@ -297,13 +290,11 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
     }
 });
 
-// ... (GET /:id, PATCH, DELETE bez zmian) ...
 router.get('/:id', authMiddleware, async (req, res) => {
   try {
     const userId = (req as any).userId;
     const id = req.params.id;
     
-    // 1. Pobierz lokalne dane
     const listing = await prisma.listing.findUnique({ 
         where: { id }, 
         include: { images: true, platformStates: true } 
@@ -314,35 +305,29 @@ router.get('/:id', authMiddleware, async (req, res) => {
 
     const responseDTO = toListingDTO(listing);
 
-    // 2. Sprawdź czy jest powiązane z Allegro
     const allegroState = listing.platformStates.find(ps => ps.platform === 'ALLEGRO' && ps.platformListingId && !ps.platformListingId.startsWith('PENDING'));
 
     if (allegroState) {
         try {
-            // Pobierz token użytkownika
             const integration = await prisma.userIntegration.findFirst({
                 where: { userId, platform: 'ALLEGRO' }
             });
 
             if (integration && integration.accessToken) {
-                // 3. Pobierz "żywe" dane z Allegro
                 const allegroData: any = await getAllegroOffer(integration.accessToken, allegroState.platformListingId);
                 
-                // 4. Dołącz do odpowiedzi
                 responseDTO.externalDetails = {
                     allegro: {
                         id: allegroData.id,
-                        status: allegroData.publication.status, // np. ACTIVE, ENDED
+                        status: allegroData.publication.status,
                         price: allegroData.sellingMode.price.amount,
                         stock: allegroData.stock.available,
-                        // Link do oferty w Sandboxie (lub produkcji)
                         webUrl: `https://allegro.pl.allegrosandbox.pl/oferta/${allegroData.id}` 
                     }
                 };
             }
         } catch (err) {
             console.error("Błąd pobierania danych live z Allegro:", err);
-            // Nie przerywamy requestu, po prostu nie dodajemy externalDetails
         }
     }
 
@@ -355,49 +340,56 @@ router.patch('/:id', authMiddleware, async (req, res) => {
     const userId = (req as any).userId;
     const id = req.params.id;
 
-    // 1. Walidacja danych przychodzących
     const data = updateSchema.parse(req.body);
 
-    // 2. Sprawdzenie czy ogłoszenie istnieje i należy do użytkownika
     const existingListing = await prisma.listing.findUnique({ where: { id } });
     if (!existingListing) return res.status(404).json({ error: 'NOT_FOUND' });
     if (existingListing.userId !== userId) return res.status(403).json({ error: 'FORBIDDEN' });
 
-    // 3. Przygotowanie danych do aktualizacji w bazie lokalnej
     const updateData: any = { 
         title: data.title,
         description: data.description 
     };
     
-    // Konwersja ceny na Decimal (wymagane przez Prismę)
     if (data.price !== undefined) {
         updateData.price = new Prisma.Decimal(data.price);
     }
 
-    // Mapowanie parameterValues (z frontend) na attributes (w bazie)
+    //Mapowanie parameterValues
     if (data.parameterValues) {
         updateData.attributes = data.parameterValues;
     }
 
-    // 4. AKTUALIZACJA LOKALNA (Najpierw zapisujemy zmiany u siebie)
+    //aktualizacja bazy danych u nas
     await prisma.listing.update({ 
         where: { id }, 
         data: updateData 
     });
 
-    // 5. POBRANIE PEŁNEJ, ŚWIEŻEJ WERSJI (Wraz ze zdjęciami i atrybutami)
+    if (data.images) {
+        await prisma.listingImage.deleteMany({ where: { listingId: id } });
+        
+        if (data.images.length > 0) {
+            await prisma.listingImage.createMany({
+                data: data.images.map(img => ({
+                    listingId: id,
+                    url: img.url
+                }))
+            });
+        }
+    }
+
     const updatedListing = await prisma.listing.findUnique({ 
         where: { id }, 
         include: { 
-            images: true,           // Pobieramy aktualne zdjęcia
-            platformStates: true    // Pobieramy ID z Allegro
+            images: true,
+            platformStates: true
         } 
     });
 
     if (!updatedListing) throw new Error("Błąd pobierania zaktualizowanego ogłoszenia");
 
-    // 6. SYNCHRONIZACJA Z ALLEGRO
-    // Sprawdzamy, czy oferta jest połączona z Allegro (i nie jest w trakcie tworzenia PENDING)
+    // Sprawdzamy, czy oferta jest połączona z Allegro i nie jest w trakcie tworzenia PENDING
     const allegroState = updatedListing.platformStates.find(
         ps => ps.platform === 'ALLEGRO' && 
         ps.platformListingId && 
@@ -413,27 +405,24 @@ router.patch('/:id', authMiddleware, async (req, res) => {
             if (integration && integration.accessToken) {
                 console.log(`[SYNC] Wysyłam aktualizację do Allegro dla oferty: ${allegroState.platformListingId}`);
                 
-                // Wywołujemy funkcję aktualizacji z kompletem świeżych danych
                 await updateAllegroOffer(
                     integration.accessToken, 
                     allegroState.platformListingId, 
                     {
                         title: updatedListing.title,
-                        price: Number(updatedListing.price), // Decimal -> Number
+                        price: Number(updatedListing.price),
                         description: updatedListing.description,
-                        images: updatedListing.images,       // Przekazujemy tablicę obiektów { url }
-                        attributes: updatedListing.attributes // Przekazujemy JSON z atrybutami
+                        images: updatedListing.images,
+                        attributes: updatedListing.attributes 
                     }
                 );
                 console.log("[SYNC] Sukces aktualizacji Allegro");
             }
         } catch (allegroError: any) {
             console.error("[SYNC] Błąd aktualizacji Allegro:", allegroError.message);
-            // Nie przerywamy requestu - zwracamy sukces lokalny, ale logujemy błąd API
         }
     }
 
-    // 7. Zwracamy zaktualizowane ogłoszenie do aplikacji
     res.json(toListingDTO(updatedListing));
 
   } catch (e: any) { 

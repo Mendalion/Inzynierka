@@ -47,8 +47,6 @@ async function allegroFetch(endpoint: string, accessToken: string, options: Requ
   return res.json();
 }
 
-// --- Definicje Typów ---
-
 export interface AllegroParameter {
     id: string; 
     name: string; 
@@ -57,7 +55,7 @@ export interface AllegroParameter {
     dictionary?: { id: string; value: string }[]; 
     unit?: string;
     options?: {
-        describesProduct?: boolean; // Kluczowa flaga z JSONa
+        describesProduct?: boolean;
         variantsAllowed?: boolean;
     }; 
 }
@@ -76,9 +74,9 @@ export interface AllegroDraftPayload {
     // Przyjmujemy tylko parametry oferty, bo produktowych bez ID produktu nie wyślemy
     offerParameters?: Array<{ id: string; valuesIds: string[]; values: string[] }>;
     productId?: string;
+    images?: Array<{ url: string }>;
 }
 
-// --- Funkcje ---
 
 export async function fetchCategoryParameters(accessToken: string, categoryId: string): Promise<AllegroParameter[]> {
     return requestWithRetry(async () => {
@@ -92,7 +90,7 @@ export async function fetchCategoryParameters(accessToken: string, categoryId: s
                 required: p.required,
                 unit: p.unit,
                 dictionary: p.dictionary ? p.dictionary.map((d: any) => ({ id: d.id, value: d.value })) : undefined,
-                options: p.options // Przekazujemy options (describesProduct)
+                options: p.options
             }));
     });
 }
@@ -111,7 +109,9 @@ export async function createAllegroDraft(accessToken: string, payload: AllegroDr
                     }
                 ]
             },
-            // Tutaj wpadnie tylko "Stan" (11323) i inne parametry oferty
+
+            images: payload.images || [],
+
             parameters: payload.offerParameters || [],
             sellingMode: {
                 format: 'BUY_NOW',
@@ -133,21 +133,13 @@ export async function createAllegroDraft(accessToken: string, payload: AllegroDr
             payments: { invoice: 'NO_INVOICE' }
         };
 
-        // LOGIKA:
-        // Jeśli mamy ID produktu (znaleziony po EAN), wiążemy ofertę z tym produktem.
-        // Wtedy NIE wysyłamy productParameters ręcznie, bo one wynikają z ID
+        //Jeśli mamy ID produktu (znaleziony po EAN), wiążemy ofertę z tym produktem.
+        //Wtedy NIE wysyłamy productParameters ręcznie, bo one wynikają z ID
         if (payload.productId) {
             body.product = {
                 id: payload.productId
             };
         }
-        // Jeśli NIE mamy ID (manualne tworzenie), usuwamy product, żeby nie było błędu 500
-        // (to jest to co zrobiliśmy w poprzedniej wiadomości)
-
-
-        // USUWAMY "body.product" CAŁKOWICIE
-        // Dzięki temu unikamy błędu "UnknownJSONProperty: product"
-
         const res = await fetch(`${ALLEGRO_API_BASE}/sale/product-offers`, {
             method: 'POST',
             headers: {
@@ -169,7 +161,6 @@ export async function createAllegroDraft(accessToken: string, payload: AllegroDr
     });
 }
 
-// ... (Auth bez zmian)
 export function getAllegroAuthUrl(state: string) {
   const redirectUri = process.env.ALLEGRO_REDIRECT_URI;
   if (!redirectUri) throw new Error("Brak ALLEGRO_REDIRECT_URI w pliku .env");
@@ -220,7 +211,7 @@ export async function getAllegroOffer(accessToken: string, offerId: string) {
 export async function updateAllegroOffer(accessToken: string, offerId: string, data: { title?: string, price?: number, description?: string, images?: { url: string }[], attributes?: any}) {
     console.log(`[ALLEGRO-CLIENT] Aktualizuję ofertę ${offerId}...`);
     
-    // Budujemy payload tylko z tych pól, które się zmieniły
+    //Budujemy payload tylko z tych pól, które się zmieniły
     const body: any = {};
 
     if (data.title) {
@@ -254,7 +245,7 @@ export async function updateAllegroOffer(accessToken: string, offerId: string, d
         const params: any[] = [];
         Object.entries(data.attributes).forEach(([key, value]) => {
             // Zakładamy uproszczenie: jeśli wartość to string, to valuesIds (słownik) lub values (tekst)
-            // W pełnej implementacji powinieneś sprawdzać typ parametru z definicji kategorii
+            // W pełnej implementacji powinnismy sprawdzać typ parametru z definicji kategorii
             const valStr = String(value);
             // Heurystyka: jeśli same cyfry/UUID to pewnie ID słownika, jeśli tekst to value
             // Dla bezpieczeństwa w MVP wysyłamy jako valuesIds (dla słowników) ORAZ values
