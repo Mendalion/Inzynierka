@@ -222,6 +222,10 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
                 });
             }
 
+            let targetStatus: any = 'DRAFT'; // Domyślnie szkic
+            if (offer.publication.status === 'ACTIVE') targetStatus = 'ACTIVE';
+            else if (offer.publication.status === 'ENDED') targetStatus = 'ARCHIVED';
+
             // 2. Sprawdź czy mamy to ogłoszenie (po ID oferty Allegro)
             const existingState = await prisma.listingPlatformState.findFirst({
                 where: {
@@ -272,7 +276,7 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
                         platformStates: {
                             create: {
                                 platform: 'ALLEGRO',
-                                status: offer.publication.status || 'DRAFT',
+                                status: targetStatus,
                                 platformListingId: allegroId
                             }
                         },
