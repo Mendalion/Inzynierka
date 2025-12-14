@@ -10,9 +10,11 @@ data class ListingDto(
     val price: String?,
     val status: String?,
     val categoryId: String?,
+    val categoryName: String?,
     val platformStates: List<PlatformStateDto>?,
     val images: List<ListingImageDto>?,
-    val externalDetails: ExternalDetailsDto? = null
+    val externalDetails: ExternalDetailsDto? = null,
+    val attributes: Map<String, Any>?
 )
 
 data class ExternalDetailsDto(
@@ -68,7 +70,8 @@ data class ListingUpdateBody(
     val title: String? = null,
     val description: String? = null,
     val price: Double? = null,
-    val images: List<ListingImagePayload>? = null
+    val images: List<ListingImagePayload>? = null,
+    val parameterValues: Map<String, String>?
 )
 
 data class ImportResponseDto(

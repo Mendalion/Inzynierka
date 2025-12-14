@@ -15,6 +15,8 @@ import okhttp3.MediaType.Companion.toMediaTypeOrNull
 import okhttp3.MultipartBody
 import okhttp3.RequestBody.Companion.asRequestBody
 import java.io.File
+import com.squareup.moshi.Moshi
+import com.squareup.moshi.Types
 import java.io.FileOutputStream
 import java.net.ConnectException
 import java.net.SocketTimeoutException
@@ -63,16 +65,24 @@ class ListingsRepository(private val context: Context) {
     }
 
     private fun mapEntityToUi(entity: ListingEntity): ListingItemUi {
+        val attrs: Map<String, String> = try {
+            if (entity.attributesJson != null) {
+                mapAdapter.fromJson(entity.attributesJson) ?: emptyMap()
+            } else emptyMap()
+        } catch (e: Exception) { emptyMap() }
+
         return ListingItemUi(
             id = entity.id,
             title = entity.title,
             price = entity.price,
             status = entity.status,
             categoryId = entity.categoryId,
+            categoryName = null,
             platforms = if (entity.platforms.isNotEmpty()) entity.platforms.split(",") else emptyList(),
             thumbnailUrl = entity.thumbnailUrl,
             description = entity.description,
-            allImages = emptyList(), //tylko miniaturkę w trybie offline
+            attributes = attrs,
+            allImages = emptyList(),
             allegroDetails = null
         )
     }
@@ -82,6 +92,11 @@ class ListingsRepository(private val context: Context) {
         val rawUrl = dto.images?.firstOrNull()?.url
         val thumb = Config.imageUrl(rawUrl)
 
+        val attrsJson = if (dto.attributes != null) {
+            val stringMap = dto.attributes.entries.associate { it.key to it.value.toString() }
+            mapAdapter.toJson(stringMap)
+        } else null
+
         return ListingEntity(
             id = dto.id,
             title = dto.title,
@@ -89,8 +104,10 @@ class ListingsRepository(private val context: Context) {
             price = dto.price ?: "0.00",
             status = dto.status ?: "UNKNOWN",
             categoryId = dto.categoryId,
+            categoryName = dto.categoryName,
             thumbnailUrl = thumb,
-            platforms = platformsStr
+            platforms = platformsStr,
+            attributesJson = attrsJson
         )
     }
 
@@ -138,15 +155,19 @@ class ListingsRepository(private val context: Context) {
                 )
             }
 
+            val attrs = dto.attributes?.entries?.associate { it.key to it.value.toString() } ?: emptyMap()
+
             val uiModel = ListingItemUi(
                 id = dto.id,
                 title = dto.title,
                 price = dto.price ?: "0.00",
                 status = dto.status ?: "UNKNOWN",
                 categoryId = dto.categoryId,
+                categoryName = dto.categoryName,
                 platforms = dto.platformStates?.map { it.platform } ?: emptyList(),
                 thumbnailUrl = entity.thumbnailUrl,
                 description = dto.description ?: "",
+                attributes = attrs,
                 allImages = allImagesUi,
                 allegroDetails = allegroDetailsUi
             )
@@ -177,11 +198,17 @@ class ListingsRepository(private val context: Context) {
         }
     }
 
+    private val moshi = Moshi.Builder().build()
+    private val mapAdapter = moshi.adapter<Map<String, String>>(
+        Types.newParameterizedType(Map::class.java, String::class.java, String::class.java)
+    )
+
     suspend fun update(
         id: String,
         title: String?,
         description: String?,
         price: Double?,
+        attributes: Map<String, String>?,
         currentImages: List<ListingImageUi>,
         newPhotos: List<Uri>
     ) = withContext(Dispatchers.IO) {
@@ -205,7 +232,8 @@ class ListingsRepository(private val context: Context) {
                 title = title,
                 description = description,
                 price = price,
-                images = allImagePayloads
+                images = allImagePayloads,
+                parameterValues = attributes
             )
 
             ApiClient.listings.update(id, body)

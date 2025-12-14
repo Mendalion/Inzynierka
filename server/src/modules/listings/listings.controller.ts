@@ -3,7 +3,7 @@ import { authMiddleware } from '../auth/auth.middleware.js';
 import { prisma } from '../../db/prisma.js';
 import { Platform, Prisma, ListingStatus } from '@prisma/client'; 
 import { toListingDTO } from './listings.mapper.js';
-import { createAllegroDraft, fetchCategoryParameters, getAllegroOffer, updateAllegroOffer, getMyAllegroOffers } from '../integrations/allegro.client.js';
+import { createAllegroDraft, fetchCategoryParameters, getAllegroOffer, updateAllegroOffer, getMyAllegroOffers, getAllegroShippingRates, getCategoryDetails } from '../integrations/allegro.client.js';
 import { z } from 'zod';
 
 
@@ -52,10 +52,9 @@ router.post('/', authMiddleware, async (req, res) => {
         let createdAllegroId: string | null = null;
         let selectedPlatform: Platform | null = null;
 
-        //Jesli frontend przysłał productId (bo znalazł po EAN), używamy go
         const productIdFromFrontend = body.productId || null;
 
-        // Wybór platformy
+        //Wybór platformy
         if (body.platform && Object.values(Platform).includes(body.platform as Platform)) {
              selectedPlatform = body.platform as Platform;
         } else if (body.platforms && Array.isArray(body.platforms) && body.platforms.length > 0) {
@@ -78,6 +77,17 @@ router.post('/', authMiddleware, async (req, res) => {
             });
             
             if (integration) {
+
+                const shippingRates = await getAllegroShippingRates(integration.accessToken);
+                if (shippingRates.length === 0) {
+                    return res.status(400).json({ 
+                        error: "Nie masz zdefiniowanych cenników dostaw na Allegro Sandbox. Zaloguj się do Allegro i utwórz cennik w ustawieniach dostawy." 
+                    });
+                }
+                
+                const selectedShippingRateId = shippingRates[0].id;
+                console.log(`[ALLEGRO] Używam cennika: ${shippingRates[0].name} (${selectedShippingRateId})`);
+
                 const paramDefs = await fetchCategoryParameters(integration.accessToken, body.categoryId);
 
                 const offerParams: any[] = [];
@@ -101,8 +111,7 @@ router.post('/', authMiddleware, async (req, res) => {
                         const isProductParam = def.options?.describesProduct === true;
                         
                         if (isProductParam) {
-                            // SKIP: Ignorujemy parametry produktu EAN aby uniknąć błędu 500
-                            // poniewaz nie mamy ID produktu, nie możemy ich wysłać.
+                            //Ignorujemy parametry produktu EAN aby uniknąć błędu 500 poniewaz nie mamy ID produktu, nie możemy ich wysłać.
                         } else {
                             offerParams.push(paramObj);
                         }
@@ -124,7 +133,8 @@ router.post('/', authMiddleware, async (req, res) => {
                     offerParameters: offerParams,
                     productId: productIdFromFrontend,
                     // Nie wysyłamy productParameters
-                    images: formattedImages
+                    images: formattedImages,
+                    shippingRateId: selectedShippingRateId
                 });
                 
                 createdAllegroId = draft.id;
@@ -185,100 +195,122 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
             return res.status(400).json({ error: "Brak integracji z Allegro" });
         }
 
-        const allegroOffers = await getMyAllegroOffers(integration.accessToken);
+        const simpleOffers = await getMyAllegroOffers(integration.accessToken);
         let importedCount = 0;
         let updatedCount = 0;
 
-        for (const offer of allegroOffers) {
-            const allegroId = offer.id;
-            
-            const price = offer.sellingMode?.price?.amount || "0";
-            
-            let description = offer.name;
-            if (offer.description && offer.description.sections) {
-                 const textItem = offer.description.sections
-                    .flatMap((s:any) => s.items)
-                    .find((i:any) => i.type === 'TEXT');
-                 if (textItem) description = textItem.content;
-            }
+        console.log(`[IMPORT] Znaleziono ${simpleOffers.length} ofert. Pobieram szczegóły...`);
 
-            const attributesJson: any = {};
-            if (offer.parameters) {
-                offer.parameters.forEach((p: any) => {
-                    let val = null;
-                    if (p.valuesIds && p.valuesIds.length > 0) val = p.valuesIds[0];
-                    else if (p.values && p.values.length > 0) val = p.values[0];
-                    
-                    if (val !== null) {
-                        attributesJson[p.id] = val;
-                    }
-                });
-            }
+        for (const simpleOffer of simpleOffers) {
+            try {
+                const fullOffer: any = await getAllegroOffer(integration.accessToken, simpleOffer.id);
+                const allegroId = fullOffer.id;
+                const price = fullOffer.sellingMode?.price?.amount || "0";
+                
+                // Opis
+                let description = fullOffer.name;
+                if (fullOffer.description && fullOffer.description.sections) {
+                     const textItem = fullOffer.description.sections
+                        .flatMap((s:any) => s.items)
+                        .find((i:any) => i.type === 'TEXT');
+                     if (textItem) description = textItem.content;
+                }
 
-            let targetStatus: any = 'DRAFT'; // Domyślnie szkic
-            if (offer.publication.status === 'ACTIVE') targetStatus = 'ACTIVE';
-            else if (offer.publication.status === 'ENDED') targetStatus = 'ARCHIVED';
-
-            //Sprawdź czy mamy to ogłoszenie
-            const existingState = await prisma.listingPlatformState.findFirst({
-                where: {
-                    platform: 'ALLEGRO',
-                    platformListingId: allegroId
-                },
-                include: { listing: true }
-            });
-            
-            const categoryId = offer.category?.id || null;
-
-            const commonData = {
-                title: offer.name,
-                price: new Prisma.Decimal(price),
-                description: description,
-                attributes: attributesJson,
-                categoryId: categoryId
-            };
-
-            if (existingState) {
-                //UPDATE
-                await prisma.listing.update({
-                    where: { id: existingState.listingId },
-                    data: commonData
-                });
-
-                //usuwamy stare zdjęcia z bazy (żeby nie dublować) i dodajemy aktualne z Allegro
-                await prisma.listingImage.deleteMany({
-                    where: { listingId: existingState.listingId }
-                });
-
-                if (offer.images && offer.images.length > 0) {
-                    await prisma.listingImage.createMany({
-                        data: offer.images.map((img: any) => ({
-                            listingId: existingState.listingId,
-                            url: img.url
-                        }))
+                // Atrybuty
+                const attributesJson: any = {};
+                if (fullOffer.parameters) {
+                    fullOffer.parameters.forEach((p: any) => {
+                        let val = null;
+                        if (p.valuesIds && p.valuesIds.length > 0) val = p.valuesIds[0];
+                        else if (p.values && p.values.length > 0) val = p.values[0];
+                        
+                        if (val !== null) {
+                            attributesJson[p.id] = val;
+                        }
                     });
                 }
-                updatedCount++;
-            } else {
-                // INSERT
-                await prisma.listing.create({
-                    data: {
-                        userId,
-                        ...commonData,
-                        status: offer.publication.status === 'ACTIVE' ? 'ACTIVE' : 'DRAFT',
-                        platformStates: {
-                            create: {
-                                platform: 'ALLEGRO',
-                                status: targetStatus,
-                                platformListingId: allegroId
-                            }
-                        },
-                        images: {
-                            create: offer.images?.map((img: any) => ({ url: img.url })) || []
-                        }
-                    }
+
+                // Kategoria
+                const categoryId = fullOffer.category?.id || null;
+                let categoryName = null;
+                if (categoryId) {
+                    try {
+                        const catDetails = await getCategoryDetails(integration.accessToken, categoryId);
+                        categoryName = catDetails.name;
+                    } catch (e) { }
+                }
+
+                const rawImages = fullOffer.images || [];
+                const preparedImages = rawImages.map((img: any) => {
+                    if (typeof img === 'string') return { url: img };
+                    return { url: img.url };
+                }).filter((img: any) => img.url);
+
+                let targetStatus: any = 'DRAFT';
+                if (fullOffer.publication.status === 'ACTIVE') targetStatus = 'ACTIVE';
+                else if (fullOffer.publication.status === 'ENDED') targetStatus = 'ARCHIVED';
+
+                const existingState = await prisma.listingPlatformState.findFirst({
+                    where: {
+                        platform: 'ALLEGRO',
+                        platformListingId: allegroId
+                    },
+                    include: { listing: true }
                 });
-                importedCount++;
+                
+                const commonData = {
+                    title: fullOffer.name,
+                    price: new Prisma.Decimal(price),
+                    description: description,
+                    attributes: attributesJson,
+                    categoryId: categoryId,
+                    categoryName: categoryName
+                };
+
+                if (existingState) {
+                    await prisma.listing.update({
+                        where: { id: existingState.listingId },
+                        data: commonData
+                    });
+
+                    //usuwamy stare zdjęcia
+                    await prisma.listingImage.deleteMany({
+                        where: { listingId: existingState.listingId }
+                    });
+
+                    //dodajemy nowe (tylko jeśli istnieją)
+                    if (preparedImages.length > 0) {
+                        await prisma.listingImage.createMany({
+                            data: preparedImages.map((img: any) => ({
+                                listingId: existingState.listingId,
+                                url: img.url
+                            }))
+                        });
+                    }
+                    updatedCount++;
+                } else {
+                    await prisma.listing.create({
+                        data: {
+                            userId,
+                            ...commonData,
+                            status: fullOffer.publication.status === 'ACTIVE' ? 'ACTIVE' : 'DRAFT',
+                            platformStates: {
+                                create: {
+                                    platform: 'ALLEGRO',
+                                    status: targetStatus,
+                                    platformListingId: allegroId
+                                }
+                            },
+                            images: {
+                                create: preparedImages
+                            }
+                        }
+                    });
+                    importedCount++;
+                }
+
+            } catch (err: any) {
+                console.error(`[IMPORT ERROR] Błąd przy ofercie ${simpleOffer.id}:`, err.message);
             }
         }
 
@@ -389,7 +421,6 @@ router.patch('/:id', authMiddleware, async (req, res) => {
 
     if (!updatedListing) throw new Error("Błąd pobierania zaktualizowanego ogłoszenia");
 
-    // Sprawdzamy, czy oferta jest połączona z Allegro i nie jest w trakcie tworzenia PENDING
     const allegroState = updatedListing.platformStates.find(
         ps => ps.platform === 'ALLEGRO' && 
         ps.platformListingId && 

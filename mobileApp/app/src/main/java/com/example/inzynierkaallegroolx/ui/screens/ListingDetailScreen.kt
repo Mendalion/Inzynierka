@@ -109,6 +109,8 @@ fun ListingDetailScreen(
                                 )
                                 Spacer(modifier = Modifier.height(8.dp))
                                 Text(text = "Status: ${listing.status}")
+                                val catText = listing.categoryName ?: listing.categoryId ?: "Brak"
+                                Text(text = "Kategoria: $catText")
                                 Text(text = "Platformy: ${listing.platforms.joinToString(", ")}")
                             }
                         }
@@ -118,6 +120,29 @@ fun ListingDetailScreen(
                             text = listing.description,
                             style = MaterialTheme.typography.bodyMedium
                         )
+
+                        if (listing.attributes.isNotEmpty()) {
+                            Text(text = "Parametry", style = MaterialTheme.typography.titleMedium)
+                            Card(
+                                modifier = Modifier.fillMaxWidth(),
+                                colors = CardDefaults.cardColors(containerColor = Color.White),
+                                elevation = CardDefaults.cardElevation(defaultElevation = 1.dp)
+                            ) {
+                                Column(Modifier.padding(16.dp)) {
+                                    listing.attributes.forEach { (key, value) ->
+                                        Row(
+                                            modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+                                            horizontalArrangement = Arrangement.SpaceBetween
+                                        ) {
+                                            Text(text = key, color = Color.Gray, modifier = Modifier.weight(1f))
+                                            Text(text = value, modifier = Modifier.weight(1f))
+                                        }
+                                        Divider(color = Color.LightGray.copy(alpha = 0.3f))
+                                    }
+                                }
+                            }
+                        }
+
                         if (listing.allImages.isNotEmpty()) {
                             LazyRow(
                                 horizontalArrangement = Arrangement.spacedBy(8.dp),

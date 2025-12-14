@@ -16,7 +16,9 @@ data class ListingEditState(
     val title: String = "",
     val description: String = "",
     val price: String = "",
-    val category: String = "",
+    val categoryId: String = "",
+    val categoryName: String = "",
+    val attributes: List<Pair<String, String>> = emptyList(),
     val serverImages: List<ListingImageUi> = emptyList(),
     val newLocalImages: List<Uri> = emptyList(),
     val isLoading: Boolean = true,
@@ -47,6 +49,9 @@ class ListingEditViewModel(app: Application, savedStateHandle: SavedStateHandle)
                     title = item.title,
                     description = item.description,
                     price = item.price,
+                    categoryId = item.categoryId ?: "",
+                    categoryName = item.categoryName ?: "Brak nazwy (ID: ${item.categoryId})",
+                    attributes = item.attributes.toList(),
                     serverImages = item.allImages,
                     isLoading = false
                 )
@@ -58,7 +63,7 @@ class ListingEditViewModel(app: Application, savedStateHandle: SavedStateHandle)
 
     fun onTitleChange(v: String) { _state.value = _state.value.copy(title = v) }
     fun onDescChange(v: String) { _state.value = _state.value.copy(description = v) }
-    fun onCategoryChange(v: String) { _state.value = _state.value.copy(category = v) }
+    fun onCategoryChange(v: String) { _state.value = _state.value.copy(categoryId = v) }
     fun onPriceChange(v: String) {
 
         if (v.all { it.isDigit() || it == '.' || it == ',' }) {
@@ -70,6 +75,13 @@ class ListingEditViewModel(app: Application, savedStateHandle: SavedStateHandle)
         val current = _state.value.newLocalImages.toMutableList()
         current.addAll(uris)
         _state.value = _state.value.copy(newLocalImages = current)
+    }
+
+    fun onAttributeChange(index: Int, newVal: String) {
+        val current = _state.value.attributes.toMutableList()
+        val oldPair = current[index]
+        current[index] = oldPair.copy(second = newVal)
+        _state.value = _state.value.copy(attributes = current)
     }
 
     //usuwanie nowych zdjęć lokalnych zanim zostaną wysłane
@@ -97,6 +109,8 @@ class ListingEditViewModel(app: Application, savedStateHandle: SavedStateHandle)
             _state.value = s.copy(error = "Tytuł i poprawna cena są wymagane")
             return
         }
+        val attrsMap = s.attributes.toMap()
+
         viewModelScope.launch {
             _state.value = s.copy(isLoading = true, error = null)
             try {
@@ -105,6 +119,7 @@ class ListingEditViewModel(app: Application, savedStateHandle: SavedStateHandle)
                     s.title,
                     s.description,
                     priceDouble,
+                    attrsMap,
                     s.serverImages,
                     s.newLocalImages
                 )

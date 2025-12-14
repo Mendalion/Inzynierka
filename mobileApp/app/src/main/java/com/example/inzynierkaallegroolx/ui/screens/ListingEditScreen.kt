@@ -77,10 +77,15 @@ fun ListingEditScreen(
                 Spacer(modifier = Modifier.height(12.dp))
 
                 OutlinedTextField(
-                    value = state.category,
-                    onValueChange = { vm.onCategoryChange(it) },
+                    value = state.categoryName.ifEmpty { state.categoryId },
+                    onValueChange = { /* vm.onCategoryChange(it) jesli oplacalne jest edytować ID */ },
                     label = { Text("Kategoria") },
-                    modifier = Modifier.fillMaxWidth()
+                    readOnly = true,
+                    modifier = Modifier.fillMaxWidth(),
+                    colors = OutlinedTextFieldDefaults.colors(
+                        disabledTextColor = MaterialTheme.colorScheme.onSurface,
+                        disabledBorderColor = MaterialTheme.colorScheme.outline
+                    )
                 )
                 Spacer(modifier = Modifier.height(12.dp))
 
@@ -90,6 +95,31 @@ fun ListingEditScreen(
                     label = { Text("Opis") },
                     modifier = Modifier.fillMaxWidth().height(150.dp)
                 )
+
+                Spacer(modifier = Modifier.height(24.dp))
+                Text("Atrybuty (Parametry)", style = MaterialTheme.typography.titleMedium)
+                Spacer(modifier = Modifier.height(8.dp))
+                state.attributes.forEachIndexed { index, pair ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text(
+                            text = "${pair.first}:",
+                            modifier = Modifier.weight(0.4f),
+                            style = MaterialTheme.typography.bodyMedium
+                        )
+                        OutlinedTextField(
+                            value = pair.second,
+                            onValueChange = { vm.onAttributeChange(index, it) },
+                            modifier = Modifier.weight(0.6f),
+                            singleLine = true
+                        )
+                    }
+                }
+                if (state.attributes.isEmpty()) {
+                    Text("Brak atrybutów do edycji.", color = Color.Gray)
+                }
 
                 Spacer(modifier = Modifier.height(24.dp))
 

@@ -71,6 +71,7 @@ model Listing {
   price      Decimal               @db.Decimal(10,2)
   status     ListingStatus         @default(DRAFT)
   categoryId  String?
+  categoryName String?
   archivedAt DateTime?
   version    Int                   @default(1)
   attributes  Json?

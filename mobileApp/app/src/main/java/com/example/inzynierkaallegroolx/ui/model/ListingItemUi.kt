@@ -19,9 +19,11 @@ data class ListingItemUi(
     val price: String,
     val status: String,
     val categoryId: String? = null,
+    val categoryName: String? = null,
     val platforms: List<String>,
     val thumbnailUrl: String? = null,
     val description: String = "",
+    val attributes: Map<String, String> = emptyMap(),
     val allImages: List<ListingImageUi> = emptyList(),
     val allegroDetails: AllegroDetailsUi? = null
 )

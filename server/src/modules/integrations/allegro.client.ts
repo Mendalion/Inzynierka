@@ -15,6 +15,27 @@ async function requestWithRetry<T>(fn: () => Promise<T>, retries = 3): Promise<T
   }
 }
 
+export interface AllegroShippingRate {
+    id: string;
+    name: string;
+}
+
+export async function getAllegroShippingRates(accessToken: string): Promise<AllegroShippingRate[]> {
+    return requestWithRetry(async () => {
+        // Endpoint zwraca cenniki zalogowanego użytkownika
+        const data: any = await allegroFetch('/sale/shipping-rates', accessToken);
+        return data.shippingRates || [];
+    });
+}
+
+export async function getCategoryDetails(accessToken: string, categoryId: string) {
+    return requestWithRetry(async () => {
+        const data: any = await allegroFetch(`/sale/categories/${categoryId}`, accessToken);
+        return data;
+    });
+}
+
+
 export async function searchAllegroProducts(accessToken: string, query: string) {
     // query to może być EAN (np. "97883...") lub nazwa
     // mode=GTIN oznacza szukanie po kodzie kreskowym, jeśli query to liczby
@@ -30,6 +51,8 @@ export async function searchAllegroProducts(accessToken: string, query: string) 
 }
 
 async function allegroFetch(endpoint: string, accessToken: string, options: RequestInit = {}) {
+  console.log(`[ALLEGRO REQUEST] ${endpoint}`);
+
   const res = await fetch(`${ALLEGRO_API_BASE}${endpoint}`, {
     ...options,
     headers: {
@@ -44,7 +67,16 @@ async function allegroFetch(endpoint: string, accessToken: string, options: Requ
     console.error(`[ALLEGRO API ERROR] ${res.status} ${res.statusText}:`, errorBody);
     throw new Error(`Allegro API Error ${res.status}: ${errorBody}`);
   }
-  return res.json();
+  const json = await res.json();
+
+  //
+  // LOGOWANIE ODPOWIEDZI DLA SZCZEGÓŁÓW OFERTY
+  //
+  if (endpoint.includes('/sale/product-offers/')) {
+      console.log(`[ALLEGRO RESPONSE ${endpoint}]:`, JSON.stringify(json, null, 2));
+  }
+
+  return json;
 }
 
 export interface AllegroParameter {
@@ -65,6 +97,7 @@ export interface AllegroDraftPayload {
     description: string;
     price: string;
     categoryId: string;
+    shippingRateId?: string;
     location: {
         city: string;
         zipCode: string;
@@ -120,8 +153,7 @@ export async function createAllegroDraft(accessToken: string, payload: AllegroDr
             stock: { available: 1, unit: 'UNIT' },
             publication: { status: 'INACTIVE' },
             delivery: {
-                // Hardcoded shipping ID - w sandboxie może wymagać zmiany na własny
-                shippingRates: { id: 'de2860b6-2581-4217-a066-5125307222ce' }, 
+                shippingRates: { id: payload.shippingRateId }, 
                 handlingTime: "PT72H"
             },
             location: {
@@ -133,8 +165,6 @@ export async function createAllegroDraft(accessToken: string, payload: AllegroDr
             payments: { invoice: 'NO_INVOICE' }
         };
 
-        //Jeśli mamy ID produktu (znaleziony po EAN), wiążemy ofertę z tym produktem.
-        //Wtedy NIE wysyłamy productParameters ręcznie, bo one wynikają z ID
         if (payload.productId) {
             body.product = {
                 id: payload.productId
@@ -211,7 +241,6 @@ export async function getAllegroOffer(accessToken: string, offerId: string) {
 export async function updateAllegroOffer(accessToken: string, offerId: string, data: { title?: string, price?: number, description?: string, images?: { url: string }[], attributes?: any}) {
     console.log(`[ALLEGRO-CLIENT] Aktualizuję ofertę ${offerId}...`);
     
-    //Budujemy payload tylko z tych pól, które się zmieniły
     const body: any = {};
 
     if (data.title) {
@@ -244,13 +273,7 @@ export async function updateAllegroOffer(accessToken: string, offerId: string, d
     if (data.attributes) {
         const params: any[] = [];
         Object.entries(data.attributes).forEach(([key, value]) => {
-            // Zakładamy uproszczenie: jeśli wartość to string, to valuesIds (słownik) lub values (tekst)
-            // W pełnej implementacji powinnismy sprawdzać typ parametru z definicji kategorii
             const valStr = String(value);
-            // Heurystyka: jeśli same cyfry/UUID to pewnie ID słownika, jeśli tekst to value
-            // Dla bezpieczeństwa w MVP wysyłamy jako valuesIds (dla słowników) ORAZ values
-            // (Allegro zignoruje niepasujące pole, ale to brudne rozwiązanie. 
-            //  Lepiej byłoby mieć typ parametru w bazie).
             params.push({
                 id: key,
                 valuesIds: [valStr], 
@@ -262,7 +285,6 @@ export async function updateAllegroOffer(accessToken: string, offerId: string, d
         }
     }
 
-    // Jeśli nic nie ma do wysłania, przerywamy
     if (Object.keys(body).length === 0) return;
 
     return requestWithRetry(async () => {

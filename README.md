@@ -16,7 +16,7 @@ docker-compose up
 docker-compose stop server
 docker-compose rm -f server
 docker-compose build server
-docker-compose start server 
+docker-compose start server  docker-compose up -d server
 
 
 git clone -b olxAllegro  https://github.com/Mendalion/Inzynierka 

@@ -35,7 +35,6 @@ router.get('/allegro/products', authMiddleware, async (req, res) => {
 
         const products = await searchAllegroProducts(integration.accessToken, query);
         
-        // Zwracamy uproszczone dane do apki
         const result = products.map((p: any) => ({
             id: p.id,
             name: p.name,
