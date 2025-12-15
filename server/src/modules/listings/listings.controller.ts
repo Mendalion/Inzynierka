@@ -16,6 +16,34 @@ const updateSchema = z.object({
     images: z.array(z.object({ url: z.string() })).optional()
 });
 
+async function mapAttributesToAllegroIds(accessToken: string, categoryId: string, attributes: any) {
+    if (!attributes || Object.keys(attributes).length === 0) return {};
+    
+    //pobieramy definicje parametrów z Allegro, żeby wiedzieć jakie ID pasuje do nazwy
+    const paramDefs = await fetchCategoryParameters(accessToken, categoryId);
+    const mapped: any = {};
+
+    Object.entries(attributes).forEach(([keyName, valLabel]) => {
+        const valStr = String(valLabel);
+        
+        const def = paramDefs.find((p: any) => p.name === keyName || p.id === keyName);
+        if (!def) return;
+
+        const paramId = def.id;
+        let valueId = valStr;
+
+        if (def.dictionary) {
+             const dictEntry = def.dictionary.find((d: any) => d.value === valStr || d.id === valStr);
+             if (dictEntry) {
+                 valueId = dictEntry.id;
+             }
+        }
+        
+        mapped[paramId] = valueId;
+    });
+    return mapped;
+}
+
 router.get('/categories/:categoryId/parameters', authMiddleware, async (req, res) => {
     const userId = (req as any).userId;
     const { categoryId } = req.params;
@@ -79,45 +107,44 @@ router.post('/', authMiddleware, async (req, res) => {
             if (integration) {
 
                 const shippingRates = await getAllegroShippingRates(integration.accessToken);
-                if (shippingRates.length === 0) {
-                    return res.status(400).json({ 
-                        error: "Nie masz zdefiniowanych cenników dostaw na Allegro Sandbox. Zaloguj się do Allegro i utwórz cennik w ustawieniach dostawy." 
-                    });
+                const selectedShippingRateId = shippingRates.length > 0 ? shippingRates[0].id : undefined;
+
+                if (!selectedShippingRateId) {
+                    console.warn("Brak zdefiniowanych cenników na koncie Allegro!");
                 }
                 
-                const selectedShippingRateId = shippingRates[0].id;
                 console.log(`[ALLEGRO] Używam cennika: ${shippingRates[0].name} (${selectedShippingRateId})`);
 
                 const paramDefs = await fetchCategoryParameters(integration.accessToken, body.categoryId);
-
                 const offerParams: any[] = [];
                 //nie zbieramy productParams, bo API ich nie przyjmie bez ID produktu
 
                 if (body.parameterValues) {
-                    Object.entries(body.parameterValues).forEach(([paramId, value]) => {
+                    Object.entries(body.parameterValues).forEach(([key, value]) => {
                         const valStr = String(value);
-                        if (!valStr) return;
-
-                        const def = paramDefs.find((p:any) => p.id === paramId);
+                        const def = paramDefs.find((p:any) => p.name === key || p.id === key);
                         if (!def) return; 
 
+                        let valueId = valStr;
                         const isDictionary = def.type === 'dictionary';
+                        
+                        if (isDictionary && def.dictionary) {
+                            const dictItem = def.dictionary.find((d:any) => d.value === valStr || d.id === valStr);
+                            if (dictItem) valueId = dictItem.id;
+                        }
+
                         const paramObj = {
-                            id: paramId,
-                            valuesIds: isDictionary ? [valStr] : [],
+                            id: def.id, // Tu musi być ID parametru
+                            valuesIds: isDictionary ? [valueId] : [],
                             values: isDictionary ? [] : [valStr]
                         };
 
                         const isProductParam = def.options?.describesProduct === true;
-                        
-                        if (isProductParam) {
-                            //Ignorujemy parametry produktu EAN aby uniknąć błędu 500 poniewaz nie mamy ID produktu, nie możemy ich wysłać.
-                        } else {
+                        if (!isProductParam) {
                             offerParams.push(paramObj);
                         }
                     });
                 }
-
                 //tylko parametry oferty
                 const draft = await createAllegroDraft(integration.accessToken, {
                     title: body.title,
@@ -221,11 +248,12 @@ router.post('/import/allegro', authMiddleware, async (req, res) => {
                 if (fullOffer.parameters) {
                     fullOffer.parameters.forEach((p: any) => {
                         let val = null;
-                        if (p.valuesIds && p.valuesIds.length > 0) val = p.valuesIds[0];
-                        else if (p.values && p.values.length > 0) val = p.values[0];
+
+                        if (p.values && p.values.length > 0) val = p.values[0];
+                        else if (p.valuesIds && p.valuesIds.length > 0) val = p.valuesIds[0];
                         
                         if (val !== null) {
-                            attributesJson[p.id] = val;
+                            attributesJson[p.name] = val;
                         }
                     });
                 }
@@ -436,6 +464,12 @@ router.patch('/:id', authMiddleware, async (req, res) => {
             if (integration && integration.accessToken) {
                 console.log(`[SYNC] Wysyłam aktualizację do Allegro dla oferty: ${allegroState.platformListingId}`);
                 
+                const allegroAttributes = await mapAttributesToAllegroIds(
+                    integration.accessToken, 
+                    updatedListing.categoryId as string, 
+                    updatedListing.attributes
+                );
+
                 await updateAllegroOffer(
                     integration.accessToken, 
                     allegroState.platformListingId, 
@@ -444,7 +478,7 @@ router.patch('/:id', authMiddleware, async (req, res) => {
                         price: Number(updatedListing.price),
                         description: updatedListing.description,
                         images: updatedListing.images,
-                        attributes: updatedListing.attributes 
+                        attributes: allegroAttributes
                     }
                 );
                 console.log("[SYNC] Sukces aktualizacji Allegro");
