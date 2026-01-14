@@ -19,4 +19,7 @@ sealed class Screen(val route: String, val title: String, val icon: ImageVector?
     object ListingDetail : Screen("listing/{id}", "Szczegóły") {
         fun createRoute(id: String) = "listing/$id"
     }
+    object ConversationDetail : Screen("conversation/{id}", "Rozmowa") {
+        fun createRoute(id: String) = "conversation/$id"
+    }
 }

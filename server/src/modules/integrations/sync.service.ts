@@ -1,5 +1,5 @@
-// Sync service stub for listings & messages
 import { prisma } from '../../db/prisma.js';
+import { sendPushToUser } from '../fcm/fcm.service.js';
 // import { fetchAllegroListings, fetchAllegroMessages } from './allegro.client.js';
 
 export async function syncListings(userId: string) {
@@ -21,24 +21,41 @@ export async function syncListings(userId: string) {
 
 export async function syncMessages(userId: string) {
   const integrations = await prisma.userIntegration.findMany({ where: { userId } });
+  
   for (const integ of integrations) {
-    let convs: Array<{ conversationId: string; messages: Array<{ sender: string; body: string; sentAt: string }> }>= [];
-    // if (integ.platform === 'ALLEGRO') convs = await fetchAllegroMessages(integ.accessToken);
-    // else if (integ.platform === 'OLX') convs = await fetchOlxMessages(integ.accessToken);
+    let convs: Array<{ conversationId: string; messages: Array<{ sender: string; body: string; sentAt: string }> }> = []; 
+
     for (const c of convs) {
-      const conv = await prisma.messageConversation.upsert({
-        where: { platform_platformConversationId: { platform: integ.platform, platformConversationId: c.conversationId } },
-        update: { updatedAt: new Date() },
-        create: { userId, platform: integ.platform, platformConversationId: c.conversationId }
-      });
-      for (const m of c.messages) {
-        await prisma.message.upsert({
-          where: { id: m.sentAt + '_' + c.conversationId + '_' + m.sender },
-          update: { },
-          create: { id: m.sentAt + '_' + c.conversationId + '_' + m.sender, conversationId: conv.id, sender: m.sender, body: m.body, sentAt: new Date(m.sentAt) }
+        const conversation = await prisma.messageConversation.upsert({
+            where: { platform_platformConversationId: { platform: integ.platform, platformConversationId: c.conversationId } },
+            update: { updatedAt: new Date() },
+            create: { userId, platform: integ.platform, platformConversationId: c.conversationId, lastMessageAt: new Date() }
         });
-      }
+
+        for (const m of c.messages) {
+            const msgId = m.sentAt + '_' + c.conversationId + '_' + m.sender;
+            const exists = await prisma.message.findUnique({ where: { id: msgId } });
+
+            if (!exists) {
+                await prisma.message.create({
+                    data: { 
+                        id: msgId, 
+                        conversationId: conversation.id, 
+                        sender: m.sender, 
+                        body: m.body, 
+                        sentAt: new Date(m.sentAt) 
+                    }
+                });
+
+                if (m.sender !== 'ME') {
+                    console.log(`Nowa wiadomość od ${m.sender}! Wysyłam push.`);
+                    await sendPushToUser(userId, "Nowa wiadomość Allegro", m.body, {
+                        conversationId: conversation.id,
+                        type: "NEW_MESSAGE"
+                    });
+                }
+            }
+        }
     }
-    if (convs.length) console.log('Synced messages', integ.platform, convs.length);
   }
 }

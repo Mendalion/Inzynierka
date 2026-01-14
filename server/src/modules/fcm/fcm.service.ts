@@ -1,29 +1,39 @@
-// Placeholder for Firebase Cloud Messaging integration
 import admin from 'firebase-admin';
 import { prisma } from '../../db/prisma.js';
 
 if (!admin.apps.length) {
-  try {
-    admin.initializeApp({ credential: admin.credential.applicationDefault() }); 
-  } catch (e) {
-    console.warn('FCM init failed (missing credentials)', e);
-  }
+  admin.initializeApp({
+    credential: admin.credential.applicationDefault()
+  });
 }
 
-export interface PushPayload {
-  type: string;
-  [key: string]: any;
-}
-
-export async function sendPushToUser(userId: string, payload: PushPayload) {
+export async function sendPushToUser(userId: string, title: string, body: string, data: Record<string, string> = {}) {
   const tokens = await prisma.deviceToken.findMany({ where: { userId } });
-  for (const t of tokens) {
-    try {
-      if (admin.apps.length) {
-        await admin.messaging().send({ token: t.token, data: Object.fromEntries(Object.entries(payload).map(([k,v]) => [k, String(v)])) });
+  
+  const uniqueTokens = [...new Set(tokens.map(t => t.token))];
+
+  if (uniqueTokens.length === 0) return;
+
+  const message: admin.messaging.MulticastMessage = {
+    tokens: uniqueTokens,
+    notification: {
+      title: title,
+      body: body,
+    },
+    data: data,
+    android: {
+      priority: 'high',
+      notification: {
+        sound: 'default',
+        clickAction: 'FLUTTER_NOTIFICATION_CLICK',
       }
-    } catch (e) {
-      console.warn('Push send failed', e);
     }
+  };
+
+  try {
+    const response = await admin.messaging().sendMulticast(message);
+    console.log(`Wysłano powiadomienia: ${response.successCount} sukcesów, ${response.failureCount} błędów.`);
+  } catch (e) {
+    console.error('Błąd wysyłania FCM:', e);
   }
 }

@@ -10,9 +10,11 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavHostController
+import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
 import androidx.navigation.compose.rememberNavController
+import androidx.navigation.navArgument
 import com.example.inzynierkaallegroolx.ui.components.AppBottomBar
 import com.example.inzynierkaallegroolx.ui.components.AppTopBar
 import com.example.inzynierkaallegroolx.ui.navigation.Screen
@@ -46,13 +48,19 @@ object Routes {
 fun AppNavigation(
     navController: NavHostController = rememberNavController(),
     authViewModel: AuthViewModel = viewModel(),
-    startDestination: String = Screen.Login.route
+    startDestination: String = Screen.Login.route,
+    startConversationId: String? = null
 ) {
+    val finalStartDestination = if (startConversationId != null) {
+        "conversation/$startConversationId"
+    } else {
+        startDestination
+    }
+
     NavHost(navController = navController, startDestination = startDestination) {
 
         composable(Screen.Login.route) {
             LoginScreen(onLoggedIn = {
-                // Po zalogowaniu idziemy do Home i czyścimy historię żeby nie cofnąć do logowania
                 navController.navigate(Screen.Home.route) {
                     popUpTo(Screen.Login.route) { inclusive = true }
                 }
@@ -84,6 +92,18 @@ fun AppNavigation(
                 //nawigacja do konkretnych rozmów
                 onNavigateToDetail = { conversationId -> navController.navigate("conversation/$conversationId")
                 }
+            )
+        }
+
+        composable(
+            route = "conversation/{id}",
+            arguments = listOf(navArgument("id") { type = NavType.StringType })
+        ) { backStackEntry ->
+            val id = backStackEntry.arguments?.getString("id") ?: ""
+
+            com.example.inzynierkaallegroolx.ui.screens.ConversationDetailScreen(
+                conversationId = id,
+                onBack = { navController.popBackStack() }
             )
         }
 

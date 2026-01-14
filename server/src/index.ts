@@ -27,23 +27,33 @@ async function main() {
   });
 
   //Cron: Synchronizacja (co 15 minut)
-  cron.schedule('*/15 * * * *', async () => {
-    console.log('Starting sync job...');
-    try {
-      const users = await prisma.user.findMany({ select: { id: true } });
-      for (const u of users) {
-        try {
-           //Oddzielne try-catch dla usera, żeby błąd jednego nie blokował reszty
-           await syncListings(u.id);
-           await syncMessages(u.id);
-        } catch (err) {
-           console.error(`Sync failed for user ${u.id}`, err);
-        }
+  // cron.schedule('*/15 * * * *', async () => {
+  //   console.log('Starting sync job...');
+  //   try {
+  //     const users = await prisma.user.findMany({ select: { id: true } });
+  //     for (const u of users) {
+  //       try {
+  //          //Oddzielne try-catch dla usera, żeby błąd jednego nie blokował reszty
+  //          await syncListings(u.id);
+  //          await syncMessages(u.id);
+  //       } catch (err) {
+  //          console.error(`Sync failed for user ${u.id}`, err);
+  //       }
+  //     }
+  //   } catch (e) {
+  //     console.error('Sync job fatal error', e);
+  //   }
+  // });
+  // Uruchamiaj co minutę
+  cron.schedule('* * * * *', async () => {
+      console.log('synchronizacja wiadomości');
+      const users = await prisma.user.findMany();
+      for (const user of users) {
+          await syncMessages(user.id);
       }
-    } catch (e) {
-      console.error('Sync job fatal error', e);
-    }
   });
+
+
 
   //Cron: Rotacja kluczy JWT (raz dziennie w nocy)
   cron.schedule('0 3 * * *', async () => {
