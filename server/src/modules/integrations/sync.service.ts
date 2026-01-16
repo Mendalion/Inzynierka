@@ -1,5 +1,6 @@
 import { prisma } from '../../db/prisma.js';
 import { sendPushToUser } from '../fcm/fcm.service.js';
+import { fetchAllegroThreads, fetchAllegroMessagesInThread } from './allegro.client.js';
 // import { fetchAllegroListings, fetchAllegroMessages } from './allegro.client.js';
 
 export async function syncListings(userId: string) {
@@ -23,39 +24,58 @@ export async function syncMessages(userId: string) {
   const integrations = await prisma.userIntegration.findMany({ where: { userId } });
   
   for (const integ of integrations) {
-    let convs: Array<{ conversationId: string; messages: Array<{ sender: string; body: string; sentAt: string }> }> = []; 
+    if (integ.platform !== 'ALLEGRO') continue;
 
-    for (const c of convs) {
-        const conversation = await prisma.messageConversation.upsert({
-            where: { platform_platformConversationId: { platform: integ.platform, platformConversationId: c.conversationId } },
-            update: { updatedAt: new Date() },
-            create: { userId, platform: integ.platform, platformConversationId: c.conversationId, lastMessageAt: new Date() }
-        });
+    try {
+        const threads = await fetchAllegroThreads(integ.accessToken);
 
-        for (const m of c.messages) {
-            const msgId = m.sentAt + '_' + c.conversationId + '_' + m.sender;
-            const exists = await prisma.message.findUnique({ where: { id: msgId } });
+        for (const thread of threads) {
+            const conversation = await prisma.messageConversation.upsert({
+                where: { 
+                    platform_platformConversationId: { 
+                        platform: integ.platform, 
+                        platformConversationId: thread.id 
+                    } 
+                },
+                update: { updatedAt: new Date() },
+                create: { 
+                    userId, 
+                    platform: integ.platform, 
+                    platformConversationId: thread.id, 
+                    lastMessageAt: new Date(thread.lastMessageDateTime) 
+                }
+            });
 
-            if (!exists) {
-                await prisma.message.create({
-                    data: { 
-                        id: msgId, 
-                        conversationId: conversation.id, 
-                        sender: m.sender, 
-                        body: m.body, 
-                        sentAt: new Date(m.sentAt) 
-                    }
-                });
+            const messages = await fetchAllegroMessagesInThread(integ.accessToken, thread.id);
 
-                if (m.sender !== 'ME') {
-                    console.log(`Nowa wiadomość od ${m.sender}! Wysyłam push.`);
-                    await sendPushToUser(userId, "Nowa wiadomość Allegro", m.body, {
-                        conversationId: conversation.id,
-                        type: "NEW_MESSAGE"
+            for (const m of messages) {
+                const msgId = m.id || `${m.createdAt}_${thread.id}_${m.author.login}`;
+                
+                const exists = await prisma.message.findUnique({ where: { id: msgId } });
+
+                if (!exists) {
+                    await prisma.message.create({
+                        data: { 
+                            id: msgId, 
+                            conversationId: conversation.id, 
+                            sender: m.author.login, 
+                            body: m.text, 
+                            sentAt: new Date(m.createdAt) 
+                        }
                     });
+
+                    if (!m.author.isInterlocutor) {
+                        console.log(`Nowa wiadomość od ${m.author.login}! Wysyłam push.`);
+                        await sendPushToUser(userId, `Wiadomość od ${m.author.login}`, m.text, {
+                            conversationId: conversation.id,
+                            type: "NEW_MESSAGE"
+                        });
+                    }
                 }
             }
         }
+    } catch (error) {
+        console.error(`Błąd synchronizacji Allegro dla użytkownika ${userId}:`, error);
     }
   }
 }

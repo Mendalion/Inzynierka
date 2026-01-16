@@ -308,6 +308,32 @@ export async function updateAllegroOffer(accessToken: string, offerId: string, d
     });
 }
 
+export async function fetchAllegroThreads(accessToken: string) {
+    return requestWithRetry(async () => {
+        const data: any = await allegroFetch('/messaging/threads?limit=20', accessToken);
+        return data.threads || [];
+    });
+}
+
+export async function fetchAllegroMessagesInThread(accessToken: string, threadId: string) {
+    return requestWithRetry(async () => {
+        const data: any = await allegroFetch(`/messaging/threads/${threadId}/messages?limit=20`, accessToken);
+        return data.messages || [];
+    });
+}
+
+export async function sendAllegroMessage(accessToken: string, threadId: string, text: string) {
+    return requestWithRetry(async () => {
+        return await allegroFetch(`/messaging/threads/${threadId}/messages`, accessToken, {
+            method: 'POST',
+            body: JSON.stringify({
+                text: text,
+                attachments: []
+            })
+        });
+    });
+}
+
 export async function getMyAllegroOffers(accessToken: string) {
     return requestWithRetry(async () => {
         const res = await allegroFetch(`/sale/offers?limit=100&publication.status=ACTIVE&publication.status=INACTIVE`, accessToken);

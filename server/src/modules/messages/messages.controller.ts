@@ -3,11 +3,11 @@ import { Platform } from '@prisma/client';
 import { authMiddleware } from '../auth/auth.middleware.js';
 import { prisma } from '../../db/prisma.js';
 import { toConversationDTO, toMessageDTO } from './messages.mapper.js';
+import { sendAllegroMessage } from '../integrations/allegro.client.js';
 import { z } from 'zod';
 
 const router = Router();
 
-// Schema dla wysyłania odpowiedzi
 const replySchema = z.object({
   body: z.string().min(1)
 });
@@ -15,17 +15,6 @@ const replySchema = z.object({
 const templateSchema = z.object({
   title: z.string().min(1),
   body: z.string().min(1)
-});
-
-//Do TESTÓW potem usunac
-//Do TESTÓW potem usunac
-//Do TESTÓW potem usunac
-const createInternalSchema = z.object({
-  email: z.string().email(),
-  body: z.string().min(1),
-  sender: z.string().default('SYSTEM'),
-  platform: z.nativeEnum(Platform).default(Platform.ALLEGRO), // Domyślnie Allegro
-  platformConversationId: z.string().optional()
 });
 
 router.get('/unread/count', authMiddleware, async (req, res) => {
@@ -79,48 +68,6 @@ router.delete('/templates/:id', authMiddleware, async (req, res) => {
     } catch (e: any) { res.status(400).json({ error: e.message }); }
 });
 
-//Do TESTÓW potem usunac
-//Do TESTÓW potem usunac
-//Do TESTÓW potem usunac
-router.post('/internal/conversations', async (req, res) => {
-  try {
-    const data = createInternalSchema.parse(req.body);
-    const user = await prisma.user.findUnique({
-        where: { email: data.email }
-    });
-    if (!user) {
-        return res.status(404).json({ error: `Nie znaleziono użytkownika o emailu: ${data.email}` });
-    }
-
-    const mockPlatformId = data.platformConversationId || `MOCK-${Date.now()}-${Math.random().toString(36).substring(7).toUpperCase()}`;  
-    const conv = await prisma.messageConversation.create({
-      data: {
-        userId: user.id,
-        platform: data.platform,
-        platformConversationId: mockPlatformId,
-        lastMessageAt: new Date(),
-        unreadCount: 1,
-        messages: {
-          create: {
-            sender: data.sender,
-            body: data.body,
-            sentAt: new Date(),
-            isRead: false
-          }
-        }
-      },
-      include: {
-        messages: true
-      }
-    });
-
-    res.json(toConversationDTO(conv));
-  } catch (e: any) {
-    res.status(400).json({ error: e.message });
-  }
-});
-
-//Pobierz listę konwersacji
 router.get('/conversations', authMiddleware, async (req, res) => {
   const userId = req.userId!;
   try {
@@ -134,7 +81,6 @@ router.get('/conversations', authMiddleware, async (req, res) => {
   }
 });
 
-//Pobierz szczegóły konwersacji wraz z wiadomościami
 router.get('/conversations/:id', authMiddleware, async (req, res) => {
   const userId = req.userId!;
   const { id } = req.params;
@@ -161,7 +107,6 @@ router.get('/conversations/:id', authMiddleware, async (req, res) => {
   }
 });
 
-//Wyślij odpowiedź (symulacja - zapisuje w bazie)
 router.post('/conversations/:id/reply', authMiddleware, async (req, res) => {
   const userId = req.userId!;
   const { id } = req.params;
@@ -169,11 +114,21 @@ router.post('/conversations/:id/reply', authMiddleware, async (req, res) => {
   try {
     const { body } = replySchema.parse(req.body);
 
-    const conv = await prisma.messageConversation.findUnique({ where: { id } });
+    const conv = await prisma.messageConversation.findUnique({ 
+      where: { id },
+      include: {
+        user: {
+          include: {
+            integrations: {
+              where: { platform: 'ALLEGRO' }
+            }
+          }
+        }
+      }
+    });
+
     if (!conv) return res.status(404).json({ error: 'NOT_FOUND' });
     if (conv.userId !== userId) return res.status(403).json({ error: 'FORBIDDEN' });
-
-    // Tworzymy nową wiadomość
     const msg = await prisma.message.create({
       data: {
         conversationId: id,
@@ -184,13 +139,33 @@ router.post('/conversations/:id/reply', authMiddleware, async (req, res) => {
       }
     });
 
-    // Aktualizujemy czas ostatniej wiadomości w konwersacji
     await prisma.messageConversation.update({
       where: { id },
       data: { lastMessageAt: new Date() }
     });
 
+    if (conv.platform === 'ALLEGRO') {
+      const integration = conv.user.integrations[0];
+      
+      if (integration && integration.accessToken) {
+        try {
+          console.log(`Wysyłam odpowiedź do Allegro dla wątku: ${conv.platformConversationId}`);
+          
+          await sendAllegroMessage(
+            integration.accessToken, 
+            conv.platformConversationId,
+            body
+          );
+        } catch (error: any) {
+          console.error("Błąd podczas wysyłania wiadomości do Allegro:", error.message);
+        }
+      } else {
+        console.warn(`Brak aktywnej integracji Allegro dla użytkownika ${userId}`);
+      }
+    }
+
     res.json(toMessageDTO(msg));
+
   } catch (e: any) {
     res.status(400).json({ error: e.message });
   }
